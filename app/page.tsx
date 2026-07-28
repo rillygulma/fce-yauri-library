@@ -144,7 +144,7 @@ const HomePage = () => {
       path: "",
       submenu: [
         {
-          sublink: "Fubk AI I Know Everything",
+          sublink: "FCE Yauri AI I Know Everything",
           subpath: "/research-ai",
         },
         {
