@@ -306,13 +306,18 @@ export default function AdminDashboard() {
           {[
             {
               icon: LayoutDashboard,
-              label: "Dashboard",
-              path: "/admin/dashboard",
+              label: "Home",
+              path: "/",
             },
             {
               icon: Users,
               label: "Users",
               path: "/register",
+            },
+            {
+              icon: BookOpen,
+              label: "Add Resources",
+              path: "/admin/resources/add",
             },
             {
               icon: BookOpen,

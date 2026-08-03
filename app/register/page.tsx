@@ -4,7 +4,7 @@ import { useRef, useState } from "react";
 import Image from "next/image";
 import { toast } from "react-hot-toast";
 
-type Role = "student" | "staff" | "librarian" | "admin";
+type Role = "student" | "staff" | "admin";
 
 interface RegisterForm {
   fullName: string;
@@ -64,7 +64,7 @@ export default function RegisterPage() {
       role,
       admissionNo: role === "student" ? prev.admissionNo : "",
       staffNo:
-        ["staff", "librarian", "admin"].includes(role)
+        ["staff","admin"].includes(role)
           ? prev.staffNo
           : "",
     }));
@@ -151,7 +151,7 @@ export default function RegisterPage() {
     }
 
     if (
-      ["staff", "librarian", "admin"].includes(form.role) &&
+      ["staff", "admin"].includes(form.role) &&
       !form.staffNo.trim()
     ) {
       toast.error("Please enter your staff number.");
@@ -177,7 +177,7 @@ export default function RegisterPage() {
         ? form.admissionNo.trim()
         : "",
     staffNo:
-      ["staff", "librarian", "admin"].includes(form.role)
+      ["staff", "admin"].includes(form.role)
         ? form.staffNo.trim()
         : "",
     department: form.department.trim(),
@@ -323,7 +323,6 @@ export default function RegisterPage() {
             >
               <option value="student">Student</option>
               <option value="staff">Staff</option>
-              <option value="librarian">Librarian</option>
               <option value="admin">Admin</option>
             </select>
 
@@ -340,7 +339,7 @@ export default function RegisterPage() {
             )}
 
             {/* STAFF NUMBER */}
-            {["staff", "librarian", "admin"].includes(
+            {["staff", "admin"].includes(
               form.role
             ) && (
               <input

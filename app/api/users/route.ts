@@ -10,7 +10,6 @@ import cloudinary from "@/lib/cloudinary";
 type UserRole =
   | "student"
   | "staff"
-  | "librarian"
   | "admin";
 
 type Gender = "male" | "female";
@@ -225,7 +224,6 @@ export async function POST(
     const validRoles: UserRole[] = [
       "student",
       "staff",
-      "librarian",
       "admin",
     ];
 
@@ -261,7 +259,6 @@ export async function POST(
 
     const staffRoles: UserRole[] = [
       "staff",
-      "librarian",
       "admin",
     ];
 

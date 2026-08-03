@@ -158,8 +158,8 @@ const HomePage = () => {
       path: "/staff",
     },
     {
-      link: "Branches",
-      path: "#",
+      link: "OPAC",
+      path: "/opac",
     },
     {
       link: "Services & Operations",
@@ -473,8 +473,8 @@ const HomePage = () => {
                 <div className="mt-6 grid grid-cols-2 gap-4 md:grid-cols-3">
                   {[
                     {
-                      title: "Browse Library",
-                      link: "/e-library/databases",
+                      title: "OPAC",
+                      link: "/opac",
                     },
                     {
                       title: "Membership",

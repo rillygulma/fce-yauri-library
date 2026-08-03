@@ -23,7 +23,6 @@ const UserSchema = new Schema(
       enum: [
         "student",
         "staff",
-        "librarian",
         "admin",
       ],
       default: "student",
