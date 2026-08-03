@@ -16,7 +16,6 @@ import {
   Megaphone,
   LogOut,
   MessageCircle,
-  Book,
   ClipboardList,
 } from "lucide-react";
 
@@ -320,11 +319,6 @@ export default function AdminDashboard() {
               path: "/admin/resources/add",
             },
             {
-              icon: BookOpen,
-              label: "Create Borrow Books",
-              path: "/admin/borrow-request",
-            },
-            {
               icon: ClipboardList,
               label: "Return Borrowed Books",
               path: "/admin/return-borrowedBook",
@@ -517,10 +511,9 @@ export default function AdminDashboard() {
                   onChange={(e) => setRoleFilter(e.target.value)}
                   className="rounded-2xl border bg-gray-50 px-4 py-3 text-sm outline-none"
                 >
-                  <option value="all">All Roles</option>
+                  <option value="all">Category</option>
                   <option value="admin">Admin</option>
                   <option value="staff">Staff</option>
-                  <option value="librarian">Librarian</option>
                   <option value="student">Student</option>
                 </select>
 
