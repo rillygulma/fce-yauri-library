@@ -319,6 +319,11 @@ export default function AdminDashboard() {
               path: "/admin/resources/add",
             },
             {
+              icon: BookOpen,
+              label: "Borrow Books",
+              path: "/admin/borrow-request",
+            },
+            {
               icon: ClipboardList,
               label: "Return Borrowed Books",
               path: "/admin/return-borrowedBook",
