@@ -1,67 +1,84 @@
-import mongoose, { Schema } from "mongoose";
+import mongoose, { Schema, Document } from "mongoose";
 
-const BorrowRequestSchema = new Schema(
-  {
-    user: {
-      type: Schema.Types.ObjectId,
-      ref: "User",
-      required: true,
+export interface IBorrowRequest extends Document {
+  user: mongoose.Types.ObjectId;
+  resource: mongoose.Types.ObjectId;
+
+  status:
+    | "pending"
+    | "approved"
+    | "rejected"
+    | "returned";
+
+  requestDate: Date;
+  approvedDate?: Date;
+  dueDate?: Date;
+  returnDate?: Date;
+
+  isReturned: boolean;
+  fine: number;
+}
+
+const BorrowRequestSchema =
+  new Schema<IBorrowRequest>(
+    {
+      user: {
+        type: Schema.Types.ObjectId,
+        ref: "User",
+        required: true,
+      },
+
+      resource: {
+        type: Schema.Types.ObjectId,
+        ref: "Resource",
+        required: true,
+      },
+
+      status: {
+        type: String,
+        enum: [
+          "pending",
+          "approved",
+          "rejected",
+          "returned",
+        ],
+        default: "pending",
+      },
+
+      requestDate: {
+        type: Date,
+        default: Date.now,
+      },
+
+      approvedDate: {
+        type: Date,
+      },
+
+      dueDate: {
+        type: Date,
+      },
+
+      returnDate: {
+        type: Date,
+      },
+
+      isReturned: {
+        type: Boolean,
+        default: false,
+      },
+
+      fine: {
+        type: Number,
+        default: 0,
+      },
     },
-
-    title: {
-      type: String,
-      required: true,
-    },
-
-    author: {
-      type: String,
-      required: true,
-    },
-
-    isbn: {
-      type: String,
-      required: true,
-    },
-
-    status: {
-      type: String,
-      enum: [
-        "borrowed",
-        "returned",
-        "overdue",
-      ],
-      default: "borrowed",
-    },
-
-    borrowDate: {
-      type: Date,
-      default: Date.now,
-    },
-
-    dueDate: {
-      type: Date,
-      required: true,
-    },
-
-    returnDate: Date,
-
-    isReturned: {
-      type: Boolean,
-      default: false,
-    },
-
-    fine: {
-      type: Number,
-      default: 0,
-    },
-  },
-  {
-    timestamps: true,
-  }
-);
+    {
+      timestamps: true,
+    }
+  );
 
 export default mongoose.models.BorrowRequest ||
-  mongoose.model(
+  mongoose.model<IBorrowRequest>(
     "BorrowRequest",
     BorrowRequestSchema
   );

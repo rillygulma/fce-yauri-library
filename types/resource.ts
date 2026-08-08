@@ -27,12 +27,16 @@ export interface Resource {
   semester?: string;
 
   level?: string;
+  
+  graduationYear?: number;
 
   session?: string;
 
   publisher: string;
 
   publicationYear: number;
+
+  volumeNumber: number;
 
   edition?: string;
 
@@ -42,13 +46,7 @@ export interface Resource {
 
   keywords: string[];
 
-  classificationNumber?: string;
-
   callNumber?: string;
-
-  accessionNumber: string;
-
-  shelfLocation?: string;
 
   college?: string;
 

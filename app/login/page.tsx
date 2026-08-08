@@ -116,7 +116,11 @@ export default function LoginPage() {
       }
 
       // ✅ store user properly
+      // Store complete user
       localStorage.setItem("user", JSON.stringify(safeUser));
+
+      // Store user ID separately for borrowing
+      localStorage.setItem("userId", safeUser._id);
 
       toast.success("Login successful");
 
@@ -156,8 +160,8 @@ export default function LoginPage() {
             </h2>
 
             <p className="mt-4 text-gray-700 leading-7">
-              To register for the FCE Yauri E-Library system, kindly contact the ICT
-              Department for account creation and registration assistance.
+              To register for the FCE Yauri E-Library system, kindly contact the
+              ICT Department for account creation and registration assistance.
             </p>
 
             <button

@@ -321,6 +321,11 @@ export default function AdminDashboard() {
             {
               icon: BookOpen,
               label: "Borrow Books",
+              path: "/opac",
+            },
+            {
+              icon: ClipboardList,
+              label: "Borrowed Books Requests",
               path: "/admin/borrow-request",
             },
             {

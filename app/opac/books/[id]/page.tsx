@@ -1,13 +1,51 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
-import { ArrowLeft, BookOpen } from "lucide-react";
+import Image from "next/image";
 import { useEffect, useState } from "react";
 
-import type { Resource } from "@/types/resource";
+import {
+  ArrowLeft,
+  BookOpen,
+  Calendar,
+  CheckCircle,
+  Library,
+  MapPin,
+  User,
+} from "lucide-react";
 
-interface BookDetailsPageProps {
+interface Resource {
+  _id: string;
+  resourceType: "book";
+
+  title?: string;
+  authors?: string[];
+  subject?: string;
+  callNumber?: string;
+  edition?: string;
+  publicationYear?: number;
+  publisher?: string;
+  isbn?: string;
+
+  totalCopies?: number;
+  availableCopies?: number;
+  borrowedCopies?: number;
+
+  coverImage?: string;
+  status?: "available" | "unavailable";
+}
+
+interface ApiResponse {
+  success?: boolean;
+  message?: string;
+  resource?: Resource;
+  borrowRequest?: {
+    _id: string;
+    status: string;
+  };
+}
+
+interface Props {
   params: Promise<{
     id: string;
   }>;
@@ -15,60 +53,288 @@ interface BookDetailsPageProps {
 
 export default function BookDetailsPage({
   params,
-}: BookDetailsPageProps) {
-  const [book, setBook] = useState<Resource | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState("");
+}: Props) {
+  const [resource, setResource] =
+    useState<Resource | null>(null);
+
+  const [loading, setLoading] =
+    useState(true);
+
+  const [error, setError] =
+    useState("");
+
+  const [borrowing, setBorrowing] =
+    useState(false);
+
+  const [message, setMessage] =
+    useState("");
+
+  const [messageType, setMessageType] =
+    useState<"success" | "error" | "">("");
+
+  /*
+   * ================================================================
+   * LOAD BOOK
+   * ================================================================
+   */
 
   useEffect(() => {
-    async function fetchBook() {
+    let mounted = true;
+
+    async function loadBook() {
       try {
         setLoading(true);
         setError("");
 
         const { id } = await params;
 
-        const response = await fetch(`/api/resources/${id}`, {
-          cache: "no-store",
-        });
-
-        if (!response.ok) {
-          throw new Error("Failed to fetch book details.");
+        if (!id) {
+          throw new Error(
+            "Book ID is missing."
+          );
         }
 
-        const data = await response.json();
+        const response = await fetch(
+          `/api/resources/${id}`,
+          {
+            method: "GET",
+            cache: "no-store",
+          }
+        );
 
-        setBook(data.resource || data.book || data);
+        const data: ApiResponse =
+          await response.json();
+
+        if (!response.ok) {
+          throw new Error(
+            data.message ||
+              "Failed to load book."
+          );
+        }
+
+        if (
+          !data.resource ||
+          data.resource.resourceType !==
+            "book"
+        ) {
+          throw new Error(
+            "This resource is not a book."
+          );
+        }
+
+        if (mounted) {
+          setResource(data.resource);
+        }
       } catch (error) {
-        console.error("BOOK DETAILS ERROR:", error);
-        setError("Unable to load book details.");
+        console.error(
+          "LOAD BOOK ERROR:",
+          error
+        );
+
+        if (mounted) {
+          setError(
+            error instanceof Error
+              ? error.message
+              : "Failed to load book."
+          );
+        }
       } finally {
-        setLoading(false);
+        if (mounted) {
+          setLoading(false);
+        }
       }
     }
 
-    fetchBook();
+    loadBook();
+
+    return () => {
+      mounted = false;
+    };
   }, [params]);
+
+  /*
+   * ================================================================
+   * BORROW BOOK
+   * ================================================================
+   */
+
+  async function handleBorrow() {
+    if (!resource) {
+      return;
+    }
+
+    /*
+     * Check availability before sending request.
+     */
+    if (
+      (resource.availableCopies ?? 0) <= 0
+    ) {
+      setMessage(
+        "This book is currently unavailable."
+      );
+
+      setMessageType("error");
+
+      return;
+    }
+
+    try {
+      setBorrowing(true);
+
+      setMessage("");
+      setMessageType("");
+
+      /*
+       * Get logged-in user.
+       *
+       * Login should save:
+       *
+       * localStorage.setItem(
+       *   "userId",
+       *   user._id
+       * );
+       */
+      const userId =
+        localStorage.getItem("userId");
+
+      /*
+       * User is not logged in.
+       */
+      if (!userId) {
+        setMessage(
+          "Please login before requesting a book."
+        );
+
+        setMessageType("error");
+
+        return;
+      }
+
+      console.log(
+        "Submitting borrow request:",
+        {
+          userId,
+          resourceId: resource._id,
+        }
+      );
+
+      /*
+       * IMPORTANT:
+       *
+       * This must match:
+       *
+       * src/app/api/borrow/route.ts
+       */
+      const response = await fetch(
+        "/api/borrow-request",
+        {
+          method: "POST",
+
+          headers: {
+            "Content-Type":
+              "application/json",
+          },
+
+          body: JSON.stringify({
+            userId,
+            resourceId: resource._id,
+          }),
+        }
+      );
+
+      const data: ApiResponse =
+        await response.json();
+
+      console.log(
+        "BORROW API RESPONSE:",
+        data
+      );
+
+      /*
+       * API returned an error.
+       */
+      if (!response.ok) {
+        throw new Error(
+          data.message ||
+            "Borrow request failed."
+        );
+      }
+
+      /*
+       * SUCCESS
+       */
+      setMessage(
+        data.message ||
+          "Borrow request submitted successfully. Please wait for librarian approval."
+      );
+
+      setMessageType("success");
+
+      /*
+       * Don't decrease available copies here.
+       *
+       * The book has only been REQUESTED.
+       *
+       * The librarian should approve it first.
+       */
+    } catch (error) {
+      console.error(
+        "BORROW BOOK ERROR:",
+        error
+      );
+
+      setMessage(
+        error instanceof Error
+          ? error.message
+          : "Borrow request failed."
+      );
+
+      setMessageType("error");
+    } finally {
+      setBorrowing(false);
+    }
+  }
+
+  /*
+   * ================================================================
+   * LOADING
+   * ================================================================
+   */
 
   if (loading) {
     return (
       <main className="min-h-screen bg-gray-50">
-        <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-          <div className="animate-pulse">
-            <div className="h-8 w-40 rounded bg-gray-200" />
+        <header className="bg-red-900 text-white">
+          <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+            <div className="h-5 w-28 animate-pulse rounded bg-white/20" />
 
-            <div className="mt-8 grid gap-8 rounded-3xl border bg-white p-6 md:grid-cols-[240px_1fr]">
-              <div className="h-80 rounded-2xl bg-gray-200" />
+            <div className="mt-6 h-7 w-56 animate-pulse rounded bg-white/20" />
+
+            <div className="mt-3 h-10 w-72 animate-pulse rounded bg-white/20" />
+          </div>
+        </header>
+
+        <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+          <div className="overflow-hidden rounded-3xl border bg-white p-6 shadow-sm sm:p-10">
+            <div className="grid gap-10 lg:grid-cols-[280px_1fr]">
+              <div className="mx-auto h-[380px] w-[270px] animate-pulse rounded-2xl bg-gray-200" />
 
               <div>
-                <div className="h-8 w-3/4 rounded bg-gray-200" />
+                <div className="h-8 w-28 animate-pulse rounded-full bg-gray-200" />
 
-                <div className="mt-5 h-5 w-1/2 rounded bg-gray-200" />
+                <div className="mt-5 h-10 w-3/4 animate-pulse rounded bg-gray-200" />
 
-                <div className="mt-8 space-y-3">
-                  <div className="h-5 rounded bg-gray-200" />
-                  <div className="h-5 rounded bg-gray-200" />
-                  <div className="h-5 rounded bg-gray-200" />
+                <div className="mt-4 h-6 w-1/2 animate-pulse rounded bg-gray-200" />
+
+                <div className="mt-10 grid gap-5 sm:grid-cols-2">
+                  {Array.from({
+                    length: 6,
+                  }).map((_, index) => (
+                    <div
+                      key={index}
+                      className="h-20 animate-pulse rounded-xl bg-gray-100"
+                    />
+                  ))}
                 </div>
               </div>
             </div>
@@ -78,162 +344,277 @@ export default function BookDetailsPage({
     );
   }
 
-  if (error || !book) {
+  /*
+   * ================================================================
+   * ERROR
+   * ================================================================
+   */
+
+  if (error || !resource) {
     return (
-      <main className="flex min-h-screen items-center justify-center bg-gray-50 px-4">
-        <div className="w-full max-w-lg rounded-3xl border border-red-200 bg-white p-8 text-center shadow-sm">
-          <h1 className="text-2xl font-bold text-gray-900">Book Not Found</h1>
+      <main className="min-h-screen bg-gray-50">
+        <header className="bg-red-900 text-white">
+          <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+            <Link
+              href="/opac"
+              className="inline-flex items-center gap-2 text-sm font-semibold text-red-100 hover:text-white"
+            >
+              <ArrowLeft size={18} />
+              Back to OPAC
+            </Link>
 
-          <p className="mt-3 text-gray-600">
-            {error || "The requested book could not be found."}
-          </p>
+            <h1 className="mt-5 text-3xl font-bold">
+              Book Details
+            </h1>
+          </div>
+        </header>
 
-          <Link
-            href="/opac"
-            className="mt-6 inline-flex items-center gap-2 rounded-xl bg-red-900 px-6 py-3 font-semibold text-white transition hover:bg-red-800"
-          >
-            <ArrowLeft size={18} />
-            Back to OPAC
-          </Link>
-        </div>
+        <section className="mx-auto max-w-3xl px-4 py-16">
+          <div className="rounded-3xl border border-red-200 bg-white p-8 text-center shadow-sm">
+            <div className="mx-auto flex h-16 w-16 items-center justify-center rounded-full bg-red-100">
+              <BookOpen
+                size={30}
+                className="text-red-900"
+              />
+            </div>
+
+            <h2 className="mt-5 text-2xl font-bold text-gray-900">
+              Book Not Found
+            </h2>
+
+            <p className="mt-2 text-gray-600">
+              {error ||
+                "The requested book could not be found."}
+            </p>
+
+            <Link
+              href="/opac"
+              className="mt-6 inline-flex items-center gap-2 rounded-xl bg-red-900 px-6 py-3 font-semibold text-white transition hover:bg-red-800"
+            >
+              <ArrowLeft size={18} />
+              Back to OPAC
+            </Link>
+          </div>
+        </section>
       </main>
     );
   }
 
-  const isAvailable = book.availableCopies > 0;
+  const available =
+    (resource.availableCopies ?? 0) > 0;
+
+  /*
+   * ================================================================
+   * PAGE
+   * ================================================================
+   */
 
   return (
     <main className="min-h-screen bg-gray-50">
-      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
-        <Link
-          href="/opac"
-          className="inline-flex items-center gap-2 text-sm font-semibold text-red-900 hover:text-red-700"
-        >
-          <ArrowLeft size={18} />
-          Back to OPAC
-        </Link>
+      {/* HEADER */}
 
-        <div className="mt-8 overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
-          <div className="grid gap-8 p-6 md:grid-cols-[240px_1fr] md:p-8">
-            <div className="relative h-80 overflow-hidden rounded-2xl bg-red-50">
-              {book.coverImage ? (
-                <Image
-                  src={book.coverImage}
-                  alt={book.title}
-                  fill
-                  sizes="240px"
-                  className="object-cover"
-                />
-              ) : (
-                <div className="flex h-full items-center justify-center">
+      <header className="bg-red-900 text-white">
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+          <Link
+            href="/opac"
+            className="inline-flex items-center gap-2 text-sm font-semibold text-red-100 transition hover:text-white"
+          >
+            <ArrowLeft size={18} />
+            Back to OPAC
+          </Link>
+
+          <div className="mt-6 flex items-center gap-3">
+            <Library size={28} />
+
+            <span className="text-sm font-semibold uppercase tracking-wider">
+              Library Catalogue
+            </span>
+          </div>
+
+          <h1 className="mt-3 text-3xl font-bold sm:text-4xl">
+            Book Details
+          </h1>
+        </div>
+      </header>
+
+      {/* CONTENT */}
+
+      <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
+        <div className="overflow-hidden rounded-3xl border border-gray-200 bg-white shadow-sm">
+          <div className="grid gap-10 p-6 sm:p-10 lg:grid-cols-[280px_1fr]">
+
+            {/* COVER */}
+
+            <div className="flex justify-center">
+              <div className="flex h-[380px] w-[270px] items-center justify-center overflow-hidden rounded-2xl bg-red-50 shadow-sm">
+                {resource.coverImage ? (
+                  <Image
+                    src={resource.coverImage}
+                    alt={
+                      resource.title ||
+                      "Book cover"
+                    }
+                    width={270}
+                    height={380}
+                    className="h-full w-full object-cover"
+                  />
+                ) : (
                   <BookOpen
-                    size={70}
-                    strokeWidth={1.5}
+                    size={90}
                     className="text-red-900"
                   />
-                </div>
-              )}
+                )}
+              </div>
             </div>
 
+            {/* INFORMATION */}
+
             <div>
-              <div className="flex flex-wrap items-center gap-3">
-                <span className="rounded-full bg-red-50 px-4 py-2 text-xs font-bold text-red-900">
+              <div className="flex flex-wrap gap-2">
+                <span className="rounded-full bg-red-100 px-4 py-2 text-sm font-semibold text-red-900">
                   Book
                 </span>
 
                 <span
-                  className={`rounded-full px-4 py-2 text-xs font-bold ${
-                    isAvailable
-                      ? "bg-green-50 text-green-700"
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
+                    available
+                      ? "bg-green-100 text-green-700"
                       : "bg-gray-100 text-gray-600"
                   }`}
                 >
-                  {isAvailable ? "Available" : "Unavailable"}
+                  {available
+                    ? "Available"
+                    : "Unavailable"}
                 </span>
               </div>
 
-              <h1 className="mt-5 text-3xl font-bold text-gray-900">
-                {book.title}
-              </h1>
+              <h2 className="mt-5 text-3xl font-bold text-gray-900">
+                {resource.title}
+              </h2>
 
-              {book.subtitle && (
-                <p className="mt-3 text-lg text-gray-500">
-                  {book.subtitle}
-                </p>
-              )}
+              {resource.authors &&
+                resource.authors.length > 0 && (
+                  <div className="mt-5 flex items-center gap-2 text-gray-600">
+                    <User size={18} />
 
-              <div className="mt-8 grid gap-4 sm:grid-cols-2">
+                    {resource.authors.join(
+                      ", "
+                    )}
+                  </div>
+                )}
+
+              {/* DETAILS */}
+
+              <div className="mt-8 grid gap-5 sm:grid-cols-2">
                 <Detail
-                  label="Author"
-                  value={book.authors?.join(", ")}
+                  label="Subject Area"
+                  value={resource.subject}
                 />
 
                 <Detail
-                  label="Publisher"
-                  value={book.publisher}
-                />
-
-                <Detail
-                  label="Publication Year"
-                  value={String(book.publicationYear)}
+                  label="Call Number"
+                  value={resource.callNumber}
+                  icon={<MapPin size={17} />}
                 />
 
                 <Detail
                   label="Edition"
-                  value={book.edition}
+                  value={resource.edition}
+                />
+
+                <Detail
+                  label="Publication"
+                  value={
+                    resource.publicationYear?.toString()
+                  }
+                  icon={
+                    <Calendar size={17} />
+                  }
+                />
+
+                <Detail
+                  label="Publisher"
+                  value={resource.publisher}
                 />
 
                 <Detail
                   label="ISBN"
-                  value={book.isbn}
-                />
-
-                <Detail
-                  label="Subject"
-                  value={book.subject}
-                />
-
-                <Detail
-                  label="Classification"
-                  value={book.classificationNumber}
-                />
-
-                <Detail
-                  label="Shelf Location"
-                  value={book.shelfLocation}
-                />
-
-                <Detail
-                  label="Accession Number"
-                  value={book.accessionNumber}
-                />
-
-                <Detail
-                  label="Available Copies"
-                  value={String(book.availableCopies)}
+                  value={resource.isbn}
                 />
               </div>
 
-              {book.description && (
-                <div className="mt-8">
-                  <h2 className="text-xl font-bold text-gray-900">
-                    Description
-                  </h2>
+              {/* COPY STATS */}
 
-                  <p className="mt-3 leading-7 text-gray-600">
-                    {book.description}
-                  </p>
+              <div className="mt-8 grid gap-4 sm:grid-cols-3">
+                <Stat
+                  label="Total Copies"
+                  value={
+                    resource.totalCopies ?? 0
+                  }
+                />
+
+                <Stat
+                  label="Available"
+                  value={
+                    resource.availableCopies ?? 0
+                  }
+                />
+
+                <Stat
+                  label="Borrowed"
+                  value={
+                    resource.borrowedCopies ?? 0
+                  }
+                />
+              </div>
+
+              {/* MESSAGE */}
+
+              {message && (
+                <div
+                  className={`mt-6 rounded-xl border p-4 text-sm font-medium ${
+                    messageType === "success"
+                      ? "border-green-200 bg-green-50 text-green-700"
+                      : "border-red-200 bg-red-50 text-red-700"
+                  }`}
+                >
+                  <div className="flex items-start gap-3">
+                    {messageType ===
+                      "success" && (
+                      <CheckCircle
+                        size={20}
+                        className="mt-0.5 shrink-0"
+                      />
+                    )}
+
+                    <span>
+                      {message}
+                    </span>
+                  </div>
                 </div>
               )}
 
+              {/* BORROW */}
+
               <div className="mt-8">
-                <button
-                  type="button"
-                  disabled={!isAvailable}
-                  className="rounded-xl bg-red-900 px-6 py-3 font-semibold text-white transition hover:bg-red-800 disabled:cursor-not-allowed disabled:bg-gray-300"
-                >
-                  {isAvailable ? "Borrow Me" : "Currently Unavailable"}
-                </button>
+                {available ? (
+                  <button
+                    type="button"
+                    onClick={handleBorrow}
+                    disabled={borrowing}
+                    className="inline-flex items-center gap-2 rounded-xl bg-red-900 px-7 py-4 font-semibold text-white shadow-lg shadow-red-900/20 transition hover:bg-red-800 disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <CheckCircle size={20} />
+
+                    {borrowing
+                      ? "Submitting Request..."
+                      : "Borrow Me"}
+                  </button>
+                ) : (
+                  <div className="rounded-xl bg-gray-100 px-6 py-4 font-semibold text-gray-600">
+                    This book is currently unavailable.
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -243,24 +624,66 @@ export default function BookDetailsPage({
   );
 }
 
+/*
+ * ================================================================
+ * DETAIL COMPONENT
+ * ================================================================
+ */
+
 function Detail({
   label,
   value,
+  icon,
 }: {
   label: string;
   value?: string;
+  icon?: React.ReactNode;
 }) {
   if (!value) {
     return null;
   }
 
   return (
-    <div className="rounded-xl bg-gray-50 p-4">
-      <p className="text-xs font-semibold uppercase tracking-wide text-gray-500">
+    <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+      <p className="text-sm font-medium text-gray-500">
         {label}
       </p>
 
-      <p className="mt-1 font-medium text-gray-900">{value}</p>
+      <p className="mt-1 flex items-center gap-2 font-medium text-gray-800">
+        {icon && (
+          <span className="text-red-900">
+            {icon}
+          </span>
+        )}
+
+        {value}
+      </p>
+    </div>
+  );
+}
+
+/*
+ * ================================================================
+ * STAT COMPONENT
+ * ================================================================
+ */
+
+function Stat({
+  label,
+  value,
+}: {
+  label: string;
+  value: number;
+}) {
+  return (
+    <div className="rounded-xl border border-gray-100 bg-gray-50 p-4">
+      <p className="text-sm font-medium text-gray-500">
+        {label}
+      </p>
+
+      <p className="mt-1 text-2xl font-bold text-gray-900">
+        {value}
+      </p>
     </div>
   );
 }

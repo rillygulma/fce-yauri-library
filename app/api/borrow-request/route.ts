@@ -1,137 +1,173 @@
-import { NextResponse } from "next/server";
+import { NextRequest, NextResponse } from "next/server";
+import mongoose from "mongoose";
+
 import { connectDB } from "@/lib/mongodb";
+import Resource from "@/models/Resource";
 import BorrowRequest from "@/models/BorrowRequest";
-import User from "@/models/User";
 
-export const runtime = "nodejs";
-
-/* ================= GET ALL BORROWS ================= */
-export async function GET() {
+export async function POST(request: NextRequest) {
   try {
     await connectDB();
 
-    const borrows = await BorrowRequest.find()
-      .populate("user", "fullName email role phoneNo")
-      .sort({ createdAt: -1 });
+    const body = await request.json();
 
-    return NextResponse.json({
-      success: true,
-      borrows,
-    });
-  } catch (error) {
-    console.error("GET BORROWS ERROR:", error);
+    const userId = body.userId;
+    const resourceId = body.resourceId;
+
+    if (!userId || !resourceId) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "User ID and resource ID are required.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !mongoose.Types.ObjectId.isValid(userId) ||
+      !mongoose.Types.ObjectId.isValid(resourceId)
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid user or resource ID.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const resource = await Resource.findById(resourceId);
+
+    if (!resource) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Resource not found.",
+        },
+        { status: 404 }
+      );
+    }
+
+    if (resource.resourceType !== "book") {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Only books can be borrowed.",
+        },
+        { status: 400 }
+      );
+    }
+
+    if (
+      !resource.availableCopies ||
+      resource.availableCopies <= 0
+    ) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "This book is currently unavailable.",
+        },
+        { status: 400 }
+      );
+    }
+
+    const existingRequest =
+      await BorrowRequest.findOne({
+        user: userId,
+        resource: resourceId,
+        status: {
+          $in: ["pending", "approved"],
+        },
+        isReturned: false,
+      });
+
+    if (existingRequest) {
+      return NextResponse.json(
+        {
+          success: false,
+          message:
+            "You already have an active request for this book.",
+        },
+        { status: 409 }
+      );
+    }
+
+    const borrowRequest =
+      await BorrowRequest.create({
+        user: userId,
+        resource: resourceId,
+        status: "pending",
+        requestDate: new Date(),
+        isReturned: false,
+        fine: 0,
+      });
 
     return NextResponse.json(
-      { success: false, message: "Failed to fetch borrows" },
+      {
+        success: true,
+        message:
+          "Borrow request submitted successfully. Please wait for librarian approval.",
+        borrowRequest,
+      },
+      { status: 201 }
+    );
+  } catch (error) {
+    console.error(
+      "BORROW REQUEST ERROR:",
+      error
+    );
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to submit borrow request.",
+      },
       { status: 500 }
     );
   }
 }
 
-/* ================= CREATE BORROW REQUEST ================= */
-export async function POST(req: Request) {
+/*
+|--------------------------------------------------------------------------
+| GET BORROW REQUESTS
+|--------------------------------------------------------------------------
+*/
+
+export async function GET() {
   try {
     await connectDB();
 
-    const body = await req.json();
-    const { email, books, title, author, isbn } = body;
-
-    // ================= USER LOOKUP =================
-    const user = await User.findOne({
-      email: email?.trim().toLowerCase(),
-    });
-
-    if (!user) {
-      return NextResponse.json(
-        { success: false, message: "User not found" },
-        { status: 404 }
-      );
-    }
-
-    // ================= ROLE-BASED DUE DATE =================
-    const role = (user.role || "").toLowerCase();
-
-    let daysAllowed = 14;
-
-    if (role.includes("postgraduate")) {
-      daysAllowed = 30;
-    } else if (
-      role.includes("staff") ||
-      role.includes("librarian") ||
-      role.includes("admin")
-    ) {
-      daysAllowed = 30;
-    }
-
-    const borrowDate = new Date();
-    const dueDate = new Date();
-    dueDate.setDate(borrowDate.getDate() + daysAllowed);
-
-    // ================= MULTI BOOK SUPPORT =================
-    let borrowData = [];
-
-    if (Array.isArray(books) && books.length > 0) {
-      // MULTIPLE BOOKS
-      borrowData = books.map(
-        (book: { title?: string; author?: string; isbn?: string }) => ({
-          user: user._id,
-          title: book.title?.trim(),
-          author: book.author?.trim(),
-          isbn: book.isbn?.trim(),
-          status: "borrowed",
-          borrowDate,
-          dueDate,
-          isReturned: false,
-          fine: 0,
+    const requests =
+      await BorrowRequest.find()
+        .populate(
+          "user",
+          "fullName email role staffNo admissionNo department"
+        )
+        .populate(
+          "resource",
+          "title authors isbn callNumber coverImage availableCopies totalCopies"
+        )
+        .sort({
+          requestDate: -1,
         })
-      );
-    } else {
-      // SINGLE BOOK FALLBACK (BACKWARD COMPATIBILITY)
-      if (!title || !author || !isbn) {
-        return NextResponse.json(
-          {
-            success: false,
-            message:
-              "Provide either books array OR title, author, isbn",
-          },
-          { status: 400 }
-        );
-      }
+        .lean();
 
-      borrowData = [
-        {
-          user: user._id,
-          title: title.trim(),
-          author: author.trim(),
-          isbn: isbn.trim(),
-          status: "borrowed",
-          borrowDate,
-          dueDate,
-          isReturned: false,
-          fine: 0,
-        },
-      ];
-    }
-
-    // ================= INSERT INTO DB =================
-    const borrows = await BorrowRequest.insertMany(borrowData);
-
-    return NextResponse.json(
-      {
-        success: true,
-        message: "Borrow request(s) created successfully",
-        borrows,
-      },
-      { status: 201 }
-    );
+    return NextResponse.json({
+      success: true,
+      requests,
+    });
   } catch (error) {
-    console.error("BORROW ERROR:", error);
+    console.error(
+      "GET BORROW REQUESTS ERROR:",
+      error
+    );
 
     return NextResponse.json(
       {
         success: false,
         message:
-          "Internal server error while creating borrow request",
+          "Failed to fetch borrow requests.",
       },
       { status: 500 }
     );

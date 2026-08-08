@@ -16,23 +16,36 @@ export async function GET(
 
     if (!userId) {
       return NextResponse.json(
-        { success: false, message: "User ID is required" },
+        {
+          success: false,
+          message: "User ID is required",
+        },
         { status: 400 }
       );
     }
 
-    const borrows = await BorrowRequest.find({
+    const requests = await BorrowRequest.find({
       user: userId,
     })
-      .populate("user", "fullName email role phoneNo")
-      .sort({ createdAt: -1 });
+      .populate(
+        "user",
+        "fullName email role phoneNo staffNo admissionNo department"
+      )
+      .populate(
+        "resource",
+        "title authors isbn callNumber coverImage subject edition publicationYear publisher"
+      )
+      .sort({ requestDate: -1 });
 
     return NextResponse.json({
       success: true,
-      borrows,
+      requests,
     });
   } catch (error) {
-    console.error("BORROW HISTORY ERROR:", error);
+    console.error(
+      "BORROW HISTORY ERROR:",
+      error
+    );
 
     return NextResponse.json(
       {
