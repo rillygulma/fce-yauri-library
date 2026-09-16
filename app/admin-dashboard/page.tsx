@@ -24,30 +24,30 @@ import Image from "next/image";
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 
-const stats = [
+const defaultStats = [
   {
     title: "Total Users",
-    value: "12,540",
+    value: "0",
     icon: Users,
-    growth: "+12% this month",
+    growth: "Registered users",
   },
   {
     title: "Books Borrowed",
-    value: "3,420",
+    value: "0",
     icon: BookOpen,
-    growth: "+8% this week",
+    growth: "Current borrow records",
   },
   {
     title: "Blog Posts",
-    value: "124",
+    value: "0",
     icon: FileText,
-    growth: "+4 new posts",
+    growth: "Published posts",
   },
   {
     title: "Active Sessions",
     value: "1,240",
     icon: Activity,
-    growth: "+18% today",
+    growth: "Active today",
   },
 ];
 
@@ -87,6 +87,9 @@ export default function AdminDashboard() {
     role: "",
     profilePicture: "",
   });
+
+  const [stats, setStats] = useState(defaultStats);
+  const [statsLoading, setStatsLoading] = useState(true);
 
   const openEditModal = (user: User) => {
     setEditingUser(user);
@@ -155,16 +158,195 @@ export default function AdminDashboard() {
   useEffect(() => {
     const fetchUsers = async () => {
       try {
-        const res = await fetch("/api/users");
+        const res = await fetch("/api/users", {
+          cache: "no-store",
+        });
+
+        if (!res.ok) {
+          throw new Error("Failed to fetch users");
+        }
+
         const data = await res.json();
 
         setUsers(data.users || []);
       } catch (error) {
-        console.log(error);
+        console.error("FETCH USERS ERROR:", error);
       }
     };
 
     fetchUsers();
+  }, []);
+
+  useEffect(() => {
+    const fetchDashboardStats = async () => {
+      try {
+        setStatsLoading(true);
+
+        /*
+         * ============================================================
+         * USERS
+         * ============================================================
+         *
+         * We already have users loaded from /api/users.
+         */
+
+        const usersResponse = await fetch("/api/users", {
+          cache: "no-store",
+        });
+
+        let totalUsers = 0;
+
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json();
+
+          totalUsers = Array.isArray(usersData.users)
+            ? usersData.users.length
+            : 0;
+        }
+
+        /*
+         * ============================================================
+         * BORROWED BOOKS
+         * ============================================================
+         */
+
+        let booksBorrowed = 0;
+
+        try {
+          const borrowResponse = await fetch(
+            "/api/borrow-request",
+            {
+              cache: "no-store",
+            }
+          );
+
+          if (borrowResponse.ok) {
+            const borrowData = await borrowResponse.json();
+
+            const requests = Array.isArray(
+              borrowData.borrowRequests
+            )
+              ? borrowData.borrowRequests
+              : Array.isArray(borrowData.requests)
+                ? borrowData.requests
+                : Array.isArray(borrowData.data)
+                  ? borrowData.data
+                  : [];
+
+            /*
+             * Count only currently approved/borrowed requests.
+             *
+             * If your API uses "approved" for a book that has
+             * been issued to the user, this will count it.
+             */
+
+            booksBorrowed = requests.filter(
+              (request: {
+                status?: string;
+              }) => {
+                const status =
+                  request.status?.toLowerCase();
+
+                return (
+                  status === "approved" ||
+                  status === "borrowed" ||
+                  status === "issued" ||
+                  status === "active"
+                );
+              }
+            ).length;
+          }
+        } catch (error) {
+          console.error(
+            "FETCH BORROW REQUESTS ERROR:",
+            error
+          );
+        }
+
+        /*
+         * ============================================================
+         * BLOG POSTS
+         * ============================================================
+         */
+
+        let blogPosts = 0;
+
+        try {
+          const blogResponse = await fetch(
+            "/api/blog",
+            {
+              cache: "no-store",
+            }
+          );
+
+          if (blogResponse.ok) {
+            const blogData =
+              await blogResponse.json();
+
+            const posts = Array.isArray(
+              blogData.posts
+            )
+              ? blogData.posts
+              : Array.isArray(blogData.blogs)
+                ? blogData.blogs
+                : Array.isArray(blogData.data)
+                  ? blogData.data
+                  : Array.isArray(blogData)
+                    ? blogData
+                    : [];
+
+            blogPosts = posts.length;
+          }
+        } catch (error) {
+          console.error(
+            "FETCH BLOG POSTS ERROR:",
+            error
+          );
+        }
+
+        /*
+         * ============================================================
+         * UPDATE DASHBOARD CARDS
+         * ============================================================
+         */
+
+        setStats([
+          {
+            title: "Total Users",
+            value: totalUsers.toLocaleString(),
+            icon: Users,
+            growth: "Registered users",
+          },
+          {
+            title: "Books Borrowed",
+            value: booksBorrowed.toLocaleString(),
+            icon: BookOpen,
+            growth: "Current borrow records",
+          },
+          {
+            title: "Blog Posts",
+            value: blogPosts.toLocaleString(),
+            icon: FileText,
+            growth: "Published posts",
+          },
+          {
+            title: "Active Sessions",
+            value: "1,240",
+            icon: Activity,
+            growth: "Active today",
+          },
+        ]);
+      } catch (error) {
+        console.error(
+          "FETCH DASHBOARD STATS ERROR:",
+          error
+        );
+      } finally {
+        setStatsLoading(false);
+      }
+    };
+
+    fetchDashboardStats();
   }, []);
 
   // ================= CONTACT API =================
@@ -272,9 +454,8 @@ export default function AdminDashboard() {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-72 flex-col bg-white shadow-2xl transition-transform duration-300 lg:translate-x-0 ${
-          sidebarOpen ? "translate-x-0" : "-translate-x-full"
-        }`}
+        className={`fixed left-0 top-0 z-50 flex h-screen w-72 flex-col bg-white shadow-2xl transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
+          }`}
       >
         <div className="flex items-center justify-between border-b p-6">
           <div className="flex items-center gap-3">
@@ -357,11 +538,10 @@ export default function AdminDashboard() {
             <Link
               key={index}
               href={item.path}
-              className={`flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition-all duration-300 ${
-                index === 0
+              className={`flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition-all duration-300 ${index === 0
                   ? "bg-blue-600 text-white shadow-lg"
                   : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
-              }`}
+                }`}
             >
               <div className="relative">
                 <item.icon className="h-5 w-5" />
@@ -473,9 +653,16 @@ export default function AdminDashboard() {
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm text-gray-500">{stat.title}</p>
+                    <p className="text-sm text-gray-500">
+                      {stat.title}
+                    </p>
+
                     <h3 className="mt-2 text-3xl font-bold text-gray-800">
-                      {stat.value}
+                      {statsLoading ? (
+                        <span className="inline-block h-9 w-24 animate-pulse rounded-lg bg-gray-200" />
+                      ) : (
+                        stat.value
+                      )}
                     </h3>
                   </div>
 
@@ -490,7 +677,6 @@ export default function AdminDashboard() {
               </div>
             ))}
           </section>
-
           {/* USERS TABLE */}
           <section className="mt-8 rounded-3xl bg-white p-6 shadow-md">
             <div className="mb-6 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
