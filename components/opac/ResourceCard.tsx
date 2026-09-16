@@ -3,6 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 
 import {
   ArrowRight,
@@ -32,9 +33,7 @@ function getResourceUrl(resource: Resource) {
    RESOURCE LABEL
 ================================================================ */
 
-function getResourceLabel(
-  type: Resource["resourceType"]
-) {
+function getResourceLabel(type: Resource["resourceType"]) {
   switch (type) {
     case "question-paper":
       return "Question Paper";
@@ -63,9 +62,13 @@ function getResourceLabel(
 export default function ResourceCard({
   resource,
 }: ResourceCardProps) {
+  const router = useRouter();
+
   const [borrowing, setBorrowing] = useState(false);
   const [borrowMessage, setBorrowMessage] = useState("");
   const [borrowSuccess, setBorrowSuccess] = useState(false);
+  const [showLoginButton, setShowLoginButton] =
+    useState(false);
 
   const isAvailable =
     resource.resourceType === "book" &&
@@ -79,148 +82,164 @@ export default function ResourceCard({
      BORROW BOOK
   ================================================================= */
 
-  async function handleBorrow() {
+  const handleBorrow = async () => {
+    if (borrowing) return;
+
     /*
-     * Only books can be borrowed.
+     * Only books can be borrowed
      */
     if (resource.resourceType !== "book") {
+      setBorrowSuccess(false);
+      setBorrowMessage(
+        "Only books can be borrowed."
+      );
+      setShowLoginButton(false);
       return;
     }
 
     /*
-     * Prevent multiple clicks.
+     * Check availability
      */
-    if (borrowing) {
+    if (!isAvailable) {
+      setBorrowSuccess(false);
+      setBorrowMessage(
+        "This book is currently unavailable."
+      );
+      setShowLoginButton(false);
       return;
     }
+
+    /*
+     * Reset previous message
+     */
+    setBorrowMessage("");
+    setBorrowSuccess(false);
+    setShowLoginButton(false);
+
+    /*
+     * ================================================================
+     * CHECK LOGIN
+     * ================================================================
+     */
+
+    const storedUser =
+      localStorage.getItem("user");
+
+    if (!storedUser) {
+      setBorrowSuccess(false);
+      setBorrowMessage(
+        "Please login to your account before requesting a book."
+      );
+      setShowLoginButton(true);
+      return;
+    }
+
+    /*
+     * ================================================================
+     * PARSE USER
+     * ================================================================
+     */
+
+    let parsedUser: {
+      _id?: string;
+    };
+
+    try {
+      parsedUser = JSON.parse(storedUser) as {
+        _id?: string;
+      };
+    } catch {
+      localStorage.removeItem("user");
+
+      setBorrowSuccess(false);
+      setBorrowMessage(
+        "Your login session is invalid. Please login again."
+      );
+      setShowLoginButton(true);
+      return;
+    }
+
+    /*
+     * ================================================================
+     * CHECK USER ID
+     * ================================================================
+     */
+
+    const userId =
+      typeof parsedUser._id === "string"
+        ? parsedUser._id.trim()
+        : "";
+
+    if (!userId) {
+      localStorage.removeItem("user");
+
+      setBorrowSuccess(false);
+      setBorrowMessage(
+        "Your login session has expired. Please login again."
+      );
+      setShowLoginButton(true);
+      return;
+    }
+
+    /*
+     * ================================================================
+     * SUBMIT BORROW REQUEST
+     * ================================================================
+     */
 
     try {
       setBorrowing(true);
-      setBorrowMessage("");
-      setBorrowSuccess(false);
 
-      /*
-       * Get the logged-in user's ID.
-       *
-       * Your login code should contain:
-       *
-       * localStorage.setItem("userId", user._id);
-       */
-      const storedUser =
-        localStorage.getItem("user");
-
-      if (!storedUser) {
-        setBorrowMessage(
-          "Please login before requesting a book."
-        );
-
-        setBorrowSuccess(false);
-
-        return;
-      }
-
-      let userId: string;
-
-      try {
-        const user = JSON.parse(storedUser);
-
-        userId = user?._id;
-
-        if (!userId) {
-          throw new Error("User ID not found.");
+      const response = await fetch(
+        "/api/borrow-request",
+        {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            userId,
+            resourceId: resource._id,
+          }),
         }
-      } catch (error) {
-        console.error(
-          "USER DATA ERROR:",
-          error
-        );
+      );
 
-        setBorrowMessage(
-          "Your login session is invalid. Please login again."
-        );
+      const data: {
+        success?: boolean;
+        message?: string;
+      } = await response.json();
 
-        setBorrowSuccess(false);
-
-        return;
-      }
-      /*
-       * Check availability.
-       */
-      if (
-        !resource.availableCopies ||
-        resource.availableCopies <= 0
-      ) {
-        setBorrowMessage(
-          "This book is currently unavailable."
-        );
-        setBorrowSuccess(false);
-        return;
-      }
-
-      /*
-       * Submit borrow request.
-       *
-       * IMPORTANT:
-       * Your API route is /api/borrow
-       */
-      const response = await fetch("/api/borrow-request", {
-        method: "POST",
-
-        headers: {
-          "Content-Type": "application/json",
-        },
-
-        body: JSON.stringify({
-          userId: userId,
-          resourceId: resource._id,
-        }),
-      });
-
-      /*
-       * Try to read the API response.
-       */
-      const data = await response.json();
-
-      /*
-       * API returned an error.
-       */
       if (!response.ok) {
-        throw new Error(
+        setBorrowSuccess(false);
+        setBorrowMessage(
           data.message ||
             "Failed to submit borrow request."
         );
+        return;
       }
 
-      /*
-       * Successful request.
-       */
       setBorrowSuccess(true);
-
       setBorrowMessage(
         data.message ||
           "Borrow request submitted successfully. Please wait for librarian approval."
       );
     } catch (error) {
       console.error(
-        "BORROW ERROR:",
+        "BORROW REQUEST ERROR:",
         error
       );
 
       setBorrowSuccess(false);
-
       setBorrowMessage(
-        error instanceof Error
-          ? error.message
-          : "Failed to submit borrow request."
+        "Unable to submit your borrow request. Please try again."
       );
     } finally {
       setBorrowing(false);
     }
-  }
+  };
 
   return (
     <article className="group flex flex-col gap-6 overflow-hidden rounded-3xl border border-gray-200 bg-white p-5 shadow-sm transition hover:shadow-md sm:flex-row">
-
       {/* ============================================================
           RESOURCE COVER
       ============================================================= */}
@@ -246,10 +265,7 @@ export default function ResourceCard({
               "Library resource"
             }
             fill
-            sizes="
-              (max-width: 640px) 100vw,
-              160px
-            "
+            sizes="(max-width: 640px) 100vw, 160px"
             className="
               object-cover
               transition-transform
@@ -282,7 +298,6 @@ export default function ResourceCard({
       ============================================================= */}
 
       <div className="min-w-0 flex-1">
-
         {/* TYPE + AVAILABILITY */}
 
         <div className="flex flex-wrap items-center gap-2">
@@ -301,7 +316,6 @@ export default function ResourceCard({
             "
           >
             <BookMarked size={14} />
-
             {resourceLabel}
           </span>
 
@@ -521,14 +535,47 @@ export default function ResourceCard({
             `}
           >
             <div className="flex items-start gap-3">
-              {borrowSuccess && (
+              {borrowSuccess ? (
                 <CheckCircle
+                  size={20}
+                  className="mt-0.5 shrink-0"
+                />
+              ) : (
+                <User
                   size={20}
                   className="mt-0.5 shrink-0"
                 />
               )}
 
-              <span>{borrowMessage}</span>
+              <div className="flex-1">
+                <p>{borrowMessage}</p>
+
+                {showLoginButton && (
+                  <button
+                    type="button"
+                    onClick={() =>
+                      router.push("/login")
+                    }
+                    className="
+                      mt-3
+                      inline-flex
+                      items-center
+                      justify-center
+                      rounded-lg
+                      bg-red-900
+                      px-4
+                      py-2
+                      text-sm
+                      font-semibold
+                      text-white
+                      transition
+                      hover:bg-red-800
+                    "
+                  >
+                    Login to Continue
+                  </button>
+                )}
+              </div>
             </div>
           </div>
         )}
@@ -569,7 +616,6 @@ export default function ResourceCard({
             "
           >
             View Details
-
             <ArrowRight size={17} />
           </Link>
 
@@ -579,9 +625,7 @@ export default function ResourceCard({
             <button
               type="button"
               onClick={handleBorrow}
-              disabled={
-                borrowing || !isAvailable
-              }
+              disabled={borrowing || !isAvailable}
               className="
                 inline-flex
                 items-center

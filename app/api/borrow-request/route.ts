@@ -1,9 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 
-import { connectDB } from "@/lib/mongodb";
-import Resource from "@/models/Resource";
+import {connectDB} from "@/lib/mongodb";
 import BorrowRequest from "@/models/BorrowRequest";
+import User from "@/models/User";
+import Resource from "@/models/Resource";
+
+export const runtime = "nodejs";
+
+/* ================================================================
+   GET ALL BORROW REQUESTS
+   Used by the librarian dashboard
+================================================================ */
+
+export async function GET() {
+  try {
+    await connectDB();
+
+    // Ensure the referenced models are registered
+    void User;
+    void Resource;
+
+    const requests = await BorrowRequest.find({})
+      .populate(
+        "user",
+        "fullName email role phoneNo staffNo admissionNo department"
+      )
+      .populate(
+        "resource",
+        "title authors isbn callNumber coverImage availableCopies resourceType"
+      )
+      .sort({ requestDate: -1 })
+      .lean();
+
+    return NextResponse.json({
+      success: true,
+      requests,
+    });
+  } catch (error) {
+    console.error("GET BORROW REQUESTS ERROR:", error);
+
+    return NextResponse.json(
+      {
+        success: false,
+        message: "Failed to load borrow requests.",
+      },
+      { status: 500 }
+    );
+  }
+}
+
+/* ================================================================
+   CREATE BORROW REQUEST
+================================================================ */
 
 export async function POST(request: NextRequest) {
   try {
@@ -11,58 +60,65 @@ export async function POST(request: NextRequest) {
 
     const body = await request.json();
 
-    const userId = body.userId;
-    const resourceId = body.resourceId;
+    const userId =
+      typeof body.userId === "string" ? body.userId.trim() : "";
+
+    const resourceId =
+      typeof body.resourceId === "string"
+        ? body.resourceId.trim()
+        : "";
 
     if (!userId || !resourceId) {
       return NextResponse.json(
         {
           success: false,
-          message: "User ID and resource ID are required.",
+          message: "Please log in before requesting a book.",
         },
-        { status: 400 }
+        { status: 401 }
       );
     }
 
     if (
-      !mongoose.Types.ObjectId.isValid(userId) ||
-      !mongoose.Types.ObjectId.isValid(resourceId)
+      !mongoose.isValidObjectId(userId) ||
+      !mongoose.isValidObjectId(resourceId)
     ) {
       return NextResponse.json(
         {
           success: false,
-          message: "Invalid user or resource ID.",
+          message: "Invalid user or book information.",
         },
         { status: 400 }
       );
     }
 
-    const resource = await Resource.findById(resourceId);
+    const Resource = mongoose.models.Resource;
+
+    if (!Resource) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Resource model is not registered.",
+        },
+        { status: 500 }
+      );
+    }
+
+    const resource = await Resource.findOne({
+      _id: resourceId,
+      resourceType: "book",
+    });
 
     if (!resource) {
       return NextResponse.json(
         {
           success: false,
-          message: "Resource not found.",
+          message: "Book not found.",
         },
         { status: 404 }
       );
     }
 
-    if (resource.resourceType !== "book") {
-      return NextResponse.json(
-        {
-          success: false,
-          message: "Only books can be borrowed.",
-        },
-        { status: 400 }
-      );
-    }
-
-    if (
-      !resource.availableCopies ||
-      resource.availableCopies <= 0
-    ) {
+    if ((resource.availableCopies ?? 0) <= 0) {
       return NextResponse.json(
         {
           success: false,
@@ -72,36 +128,32 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const existingRequest =
-      await BorrowRequest.findOne({
-        user: userId,
-        resource: resourceId,
-        status: {
-          $in: ["pending", "approved"],
-        },
-        isReturned: false,
-      });
+    const existingRequest = await BorrowRequest.findOne({
+      user: userId,
+      resource: resourceId,
+      status: {
+        $in: ["pending", "approved"],
+      },
+    });
 
     if (existingRequest) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "You already have an active request for this book.",
+          message: "You have already borrowed or reserved this book.",
         },
         { status: 409 }
       );
     }
 
-    const borrowRequest =
-      await BorrowRequest.create({
-        user: userId,
-        resource: resourceId,
-        status: "pending",
-        requestDate: new Date(),
-        isReturned: false,
-        fine: 0,
-      });
+    const borrowRequest = await BorrowRequest.create({
+      user: userId,
+      resource: resourceId,
+      status: "pending",
+      requestDate: new Date(),
+      isReturned: false,
+      fine: 0,
+    });
 
     return NextResponse.json(
       {
@@ -113,61 +165,12 @@ export async function POST(request: NextRequest) {
       { status: 201 }
     );
   } catch (error) {
-    console.error(
-      "BORROW REQUEST ERROR:",
-      error
-    );
+    console.error("CREATE BORROW REQUEST ERROR:", error);
 
     return NextResponse.json(
       {
         success: false,
         message: "Failed to submit borrow request.",
-      },
-      { status: 500 }
-    );
-  }
-}
-
-/*
-|--------------------------------------------------------------------------
-| GET BORROW REQUESTS
-|--------------------------------------------------------------------------
-*/
-
-export async function GET() {
-  try {
-    await connectDB();
-
-    const requests =
-      await BorrowRequest.find()
-        .populate(
-          "user",
-          "fullName email role staffNo admissionNo department"
-        )
-        .populate(
-          "resource",
-          "title authors isbn callNumber coverImage availableCopies totalCopies"
-        )
-        .sort({
-          requestDate: -1,
-        })
-        .lean();
-
-    return NextResponse.json({
-      success: true,
-      requests,
-    });
-  } catch (error) {
-    console.error(
-      "GET BORROW REQUESTS ERROR:",
-      error
-    );
-
-    return NextResponse.json(
-      {
-        success: false,
-        message:
-          "Failed to fetch borrow requests.",
       },
       { status: 500 }
     );

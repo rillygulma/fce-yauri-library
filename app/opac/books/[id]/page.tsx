@@ -108,14 +108,14 @@ export default function BookDetailsPage({
         if (!response.ok) {
           throw new Error(
             data.message ||
-              "Failed to load book."
+            "Failed to load book."
           );
         }
 
         if (
           !data.resource ||
           data.resource.resourceType !==
-            "book"
+          "book"
         ) {
           throw new Error(
             "This resource is not a book."
@@ -158,83 +158,84 @@ export default function BookDetailsPage({
    * ================================================================
    */
 
+
   async function handleBorrow() {
     if (!resource) {
       return;
     }
 
     /*
-     * Check availability before sending request.
+     * ================================================================
+     * CHECK LOGIN FIRST
+     * ================================================================
      */
-    if (
-      (resource.availableCopies ?? 0) <= 0
-    ) {
-      setMessage(
-        "This book is currently unavailable."
-      );
 
+    const storedUser = localStorage.getItem("user");
+
+    if (!storedUser) {
+      setMessage("Please login to your account before borrowing a book.");
       setMessageType("error");
-
       return;
     }
 
+    let user: { _id?: string };
+
+    try {
+      user = JSON.parse(storedUser);
+    } catch {
+      localStorage.removeItem("user");
+
+      setMessage(
+        "Your login session is invalid. Please login again."
+      );
+      setMessageType("error");
+      return;
+    }
+
+    const userId = user?._id;
+
+    if (!userId) {
+      localStorage.removeItem("user");
+
+      setMessage(
+        "Your login session has expired. Please login again."
+      );
+      setMessageType("error");
+      return;
+    }
+
+    /*
+     * ================================================================
+     * CHECK BOOK AVAILABILITY
+     * ================================================================
+     */
+
+    if ((resource.availableCopies ?? 0) <= 0) {
+      setMessage(
+        "This book is currently unavailable."
+      );
+      setMessageType("error");
+      return;
+    }
+
+    /*
+     * ================================================================
+     * SUBMIT BORROW REQUEST
+     * ================================================================
+     */
+
     try {
       setBorrowing(true);
-
       setMessage("");
       setMessageType("");
 
-      /*
-       * Get logged-in user.
-       *
-       * Login should save:
-       *
-       * localStorage.setItem(
-       *   "userId",
-       *   user._id
-       * );
-       */
-      const userId =
-        localStorage.getItem("userId");
-
-      /*
-       * User is not logged in.
-       */
-      if (!userId) {
-        setMessage(
-          "Please login before requesting a book."
-        );
-
-        setMessageType("error");
-
-        return;
-      }
-
-      console.log(
-        "Submitting borrow request:",
-        {
-          userId,
-          resourceId: resource._id,
-        }
-      );
-
-      /*
-       * IMPORTANT:
-       *
-       * This must match:
-       *
-       * src/app/api/borrow/route.ts
-       */
       const response = await fetch(
         "/api/borrow-request",
         {
           method: "POST",
-
           headers: {
-            "Content-Type":
-              "application/json",
+            "Content-Type": "application/json",
           },
-
           body: JSON.stringify({
             userId,
             resourceId: resource._id,
@@ -245,38 +246,19 @@ export default function BookDetailsPage({
       const data: ApiResponse =
         await response.json();
 
-      console.log(
-        "BORROW API RESPONSE:",
-        data
-      );
-
-      /*
-       * API returned an error.
-       */
       if (!response.ok) {
         throw new Error(
           data.message ||
-            "Borrow request failed."
+          "Borrow request failed."
         );
       }
 
-      /*
-       * SUCCESS
-       */
       setMessage(
         data.message ||
-          "Borrow request submitted successfully. Please wait for librarian approval."
+        "Borrow request submitted successfully. Please wait for librarian approval."
       );
 
       setMessageType("success");
-
-      /*
-       * Don't decrease available copies here.
-       *
-       * The book has only been REQUESTED.
-       *
-       * The librarian should approve it first.
-       */
     } catch (error) {
       console.error(
         "BORROW BOOK ERROR:",
@@ -294,7 +276,6 @@ export default function BookDetailsPage({
       setBorrowing(false);
     }
   }
-
   /*
    * ================================================================
    * LOADING
@@ -476,11 +457,10 @@ export default function BookDetailsPage({
                 </span>
 
                 <span
-                  className={`rounded-full px-4 py-2 text-sm font-semibold ${
-                    available
+                  className={`rounded-full px-4 py-2 text-sm font-semibold ${available
                       ? "bg-green-100 text-green-700"
                       : "bg-gray-100 text-gray-600"
-                  }`}
+                    }`}
                 >
                   {available
                     ? "Available"
@@ -568,31 +548,47 @@ export default function BookDetailsPage({
                 />
               </div>
 
+
               {/* MESSAGE */}
 
               {message && (
                 <div
-                  className={`mt-6 rounded-xl border p-4 text-sm font-medium ${
-                    messageType === "success"
+                  className={`mt-6 rounded-xl border p-4 text-sm font-medium ${messageType === "success"
                       ? "border-green-200 bg-green-50 text-green-700"
                       : "border-red-200 bg-red-50 text-red-700"
-                  }`}
+                    }`}
                 >
                   <div className="flex items-start gap-3">
-                    {messageType ===
-                      "success" && (
+                    {messageType === "success" ? (
                       <CheckCircle
+                        size={20}
+                        className="mt-0.5 shrink-0"
+                      />
+                    ) : (
+                      <User
                         size={20}
                         className="mt-0.5 shrink-0"
                       />
                     )}
 
-                    <span>
-                      {message}
-                    </span>
+                    <div className="flex-1">
+                      <p>{message}</p>
+
+                      {/* LOGIN BUTTON FOR UNAUTHENTICATED USERS */}
+                      {message.includes("Please login") ||
+                        message.includes("login again") ? (
+                        <Link
+                          href="/login"
+                          className="mt-3 inline-flex items-center rounded-lg bg-red-900 px-4 py-2 text-sm font-semibold text-white transition hover:bg-red-800"
+                        >
+                          Login to Continue
+                        </Link>
+                      ) : null}
+                    </div>
                   </div>
                 </div>
               )}
+
 
               {/* BORROW */}
 

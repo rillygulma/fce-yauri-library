@@ -2,27 +2,31 @@ import { NextRequest, NextResponse } from "next/server";
 import mongoose from "mongoose";
 
 import { connectDB } from "@/lib/mongodb";
-import Resource from "@/models/Resource";
 import BorrowRequest from "@/models/BorrowRequest";
+import Resource from "@/models/Resource";
 
-interface RouteParams {
-  params: Promise<{
-    id: string;
-  }>;
+export const runtime = "nodejs";
+
+type Action = "approve" | "reject";
+
+interface RouteContext {
+  params: Promise<{ id: string }>;
 }
+
+/* ================================================================
+   APPROVE OR REJECT BORROW REQUEST
+================================================================ */
 
 export async function PATCH(
   request: NextRequest,
-  { params }: RouteParams
+  context: RouteContext
 ) {
   try {
     await connectDB();
 
-    const { id } = await params;
+    const { id } = await context.params;
 
-    if (
-      !mongoose.Types.ObjectId.isValid(id)
-    ) {
+    if (!mongoose.isValidObjectId(id)) {
       return NextResponse.json(
         {
           success: false,
@@ -33,25 +37,19 @@ export async function PATCH(
     }
 
     const body = await request.json();
+    const action = body.action as Action;
 
-    const action = body.action;
-
-    if (
-      action !== "approve" &&
-      action !== "reject"
-    ) {
+    if (action !== "approve" && action !== "reject") {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Action must be approve or reject.",
+          message: "Action must be approve or reject.",
         },
         { status: 400 }
       );
     }
 
-    const borrowRequest =
-      await BorrowRequest.findById(id);
+    const borrowRequest = await BorrowRequest.findById(id);
 
     if (!borrowRequest) {
       return NextResponse.json(
@@ -63,22 +61,19 @@ export async function PATCH(
       );
     }
 
-    if (
-      borrowRequest.status !== "pending"
-    ) {
+    if (borrowRequest.status !== "pending") {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "This borrow request has already been processed.",
+          message: `This request has already been ${borrowRequest.status}.`,
         },
         { status: 409 }
       );
     }
 
-    /*
-     * REJECT
-     */
+    /* ============================================================
+       REJECT REQUEST
+    ============================================================ */
 
     if (action === "reject") {
       borrowRequest.status = "rejected";
@@ -87,148 +82,71 @@ export async function PATCH(
 
       return NextResponse.json({
         success: true,
-        message:
-          "Borrow request rejected successfully.",
-        borrowRequest,
+        message: "Borrow request rejected successfully.",
+        request: borrowRequest,
       });
     }
 
-    /*
-     * APPROVE
-     */
+    /* ============================================================
+       APPROVE REQUEST
+    ============================================================ */
 
-    const resource =
-      await Resource.findById(
-        borrowRequest.resource
-      );
+    const resource = await Resource.findById(borrowRequest.resource);
 
     if (!resource) {
       return NextResponse.json(
         {
           success: false,
-          message: "Book not found.",
+          message: "Book associated with this request was not found.",
         },
         { status: 404 }
       );
     }
 
-    if (
-      resource.resourceType !== "book"
-    ) {
+    if ((resource.availableCopies ?? 0) <= 0) {
       return NextResponse.json(
         {
           success: false,
-          message:
-            "Only books can be borrowed.",
-        },
-        { status: 400 }
-      );
-    }
-
-    /*
-     * Check availability again.
-     *
-     * This is important because another
-     * request may have been approved first.
-     */
-
-    if (
-      !resource.availableCopies ||
-      resource.availableCopies <= 0
-    ) {
-      return NextResponse.json(
-        {
-          success: false,
-          message:
-            "This book is no longer available.",
+          message: "No available copies remain for this book.",
         },
         { status: 409 }
       );
     }
 
-    /*
-     * Determine borrowing period.
-     *
-     * Undergraduate: 14 days
-     * Postgraduate: 30 days
-     * Staff: 30 days
-     */
+    const now = new Date();
 
-    let borrowingDays = 14;
+    // Default borrowing period: 14 days
+    const dueDate = new Date(now);
+    dueDate.setDate(dueDate.getDate() + 14);
 
-    const userRole =
-      String(borrowRequest.userRole || "");
-
-    if (
-      userRole === "postgraduate" ||
-      userRole === "staff"
-    ) {
-      borrowingDays = 30;
-    }
-
-    const approvedDate =
-      new Date();
-
-    const dueDate =
-      new Date(approvedDate);
-
-    dueDate.setDate(
-      dueDate.getDate() +
-        borrowingDays
+    resource.availableCopies = Math.max(
+      0,
+      (resource.availableCopies ?? 0) - 1
     );
 
-    /*
-     * Update borrow request
-     */
-
-    borrowRequest.status =
-      "approved";
-
-    borrowRequest.approvedDate =
-      approvedDate;
-
-    borrowRequest.dueDate =
-      dueDate;
-
-    borrowRequest.isReturned =
-      false;
-
-    /*
-     * Update book copies
-     */
-
-    resource.availableCopies =
-      Math.max(
-        0,
-        (resource.availableCopies || 0) -
-          1
-      );
-
     resource.borrowedCopies =
-      (resource.borrowedCopies || 0) +
-      1;
+      (resource.borrowedCopies ?? 0) + 1;
 
     await resource.save();
+
+    borrowRequest.status = "approved";
+    borrowRequest.approvedDate = now;
+    borrowRequest.dueDate = dueDate;
+
     await borrowRequest.save();
 
     return NextResponse.json({
       success: true,
-      message:
-        "Borrow request approved successfully.",
-      borrowRequest,
-      dueDate,
+      message: "Borrow request approved successfully.",
+      request: borrowRequest,
     });
   } catch (error) {
-    console.error(
-      "BORROW APPROVAL ERROR:",
-      error
-    );
+    console.error("UPDATE BORROW REQUEST ERROR:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message:
-          "Failed to process borrow request.",
+        message: "Failed to update borrow request.",
       },
       { status: 500 }
     );

@@ -1,13 +1,18 @@
 import { NextResponse } from "next/server";
+import mongoose from "mongoose";
+
 import { connectDB } from "@/lib/mongodb";
 import BorrowRequest from "@/models/BorrowRequest";
+import User from "@/models/User";
+import Resource from "@/models/Resource";
 
 export const runtime = "nodejs";
 
-/* ================= GET USER BORROW HISTORY ================= */
 export async function GET(
-  req: Request,
-  context: { params: Promise<{ userId: string }> }
+  _request: Request,
+  context: {
+    params: Promise<{ userId: string }>;
+  }
 ) {
   try {
     await connectDB();
@@ -18,14 +23,30 @@ export async function GET(
       return NextResponse.json(
         {
           success: false,
-          message: "User ID is required",
+          message: "User ID is required.",
         },
         { status: 400 }
       );
     }
 
+    // Validate the user ID before querying MongoDB
+    if (!mongoose.isValidObjectId(userId)) {
+      return NextResponse.json(
+        {
+          success: false,
+          message: "Invalid user ID.",
+        },
+        { status: 400 }
+      );
+    }
+
+    // Ensure referenced models are registered before populate()
+    void User;
+    void Resource;
+
+    // Fetch only this user's borrowing history
     const requests = await BorrowRequest.find({
-      user: userId,
+      user: new mongoose.Types.ObjectId(userId),
     })
       .populate(
         "user",
@@ -35,22 +56,20 @@ export async function GET(
         "resource",
         "title authors isbn callNumber coverImage subject edition publicationYear publisher"
       )
-      .sort({ requestDate: -1 });
+      .sort({ requestDate: -1 })
+      .lean();
 
     return NextResponse.json({
       success: true,
       requests,
     });
   } catch (error) {
-    console.error(
-      "BORROW HISTORY ERROR:",
-      error
-    );
+    console.error("BORROW HISTORY ERROR:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to fetch borrow history",
+        message: "Failed to fetch borrow history.",
       },
       { status: 500 }
     );

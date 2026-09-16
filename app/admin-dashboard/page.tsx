@@ -325,8 +325,8 @@ export default function AdminDashboard() {
             },
             {
               icon: ClipboardList,
-              label: "Borrowed Books Requests",
-              path: "/admin/borrow-request",
+              label: "View Books Requests",
+              path: "/librarian/borrow-requests",
             },
             {
               icon: ClipboardList,
