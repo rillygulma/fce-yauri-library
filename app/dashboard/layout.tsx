@@ -27,7 +27,7 @@ export default async function AdminLayout({
   }
 
   // ✅ UPDATED ROLE CHECK
-  const allowedRoles = ["undergraduate", "postgraduate", "staff"];
+  const allowedRoles = ["student", "staff"];
 
   if (!allowedRoles.includes(decoded.role)) {
     redirect("/dashboard");

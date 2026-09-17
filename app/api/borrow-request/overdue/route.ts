@@ -1,68 +1,144 @@
 import { NextResponse } from "next/server";
+
 import { connectDB } from "@/lib/mongodb";
 import BorrowRequest from "@/models/BorrowRequest";
+import User from "@/models/User";
+import Resource from "@/models/Resource";
 
 export const runtime = "nodejs";
+
+function getFinePerDay(role?: string) {
+  switch (role?.toLowerCase()) {
+    case "staff":
+      return 100;
+
+    case "student":
+      return 50;
+
+    default:
+      return 0;
+  }
+}
+
+function getDaysLate(dueDate: Date) {
+  const dueDay = Date.UTC(
+    dueDate.getFullYear(),
+    dueDate.getMonth(),
+    dueDate.getDate()
+  );
+
+  const today = new Date();
+
+  const todayDay = Date.UTC(
+    today.getFullYear(),
+    today.getMonth(),
+    today.getDate()
+  );
+
+  return Math.max(
+    0,
+    Math.floor(
+      (todayDay - dueDay) /
+        (1000 * 60 * 60 * 24)
+    )
+  );
+}
 
 export async function GET() {
   try {
     await connectDB();
 
-    const today = new Date();
+    // Keeps the referenced models registered for populate().
+    void User;
+    void Resource;
 
-    const overdueBooks = await BorrowRequest.find({
+    const requests = await BorrowRequest.find({
+      status: "approved",
       isReturned: false,
-      status: "borrowed",
-      dueDate: { $lt: today },
+      dueDate: { $exists: true },
     })
       .populate(
         "user",
-        "fullName email phoneNo role profilePicture staffNo admissionNo",
+        "fullName email role admissionNo staffNo phoneNo"
       )
-      .sort({ dueDate: 1 });
+      .populate(
+        "resource",
+        "title authors isbn callNumber"
+      )
+      .sort({ dueDate: 1 })
+      .lean();
 
-    const booksWithFine = overdueBooks.map((book) => {
-      const daysLate = Math.ceil(
-        (today.getTime() - new Date(book.dueDate).getTime()) /
-          (1000 * 60 * 60 * 24),
-      );
+    const overdueBooks = requests
+      .filter((request) => {
+        if (!request.dueDate) {
+          return false;
+        }
 
-      const role = (book.user?.role || "").toLowerCase();
+        return getDaysLate(
+          new Date(request.dueDate)
+        ) > 0;
+      })
+      .map((request) => {
+        const user = request.user as {
+          fullName?: string;
+          email?: string;
+          role?: string;
+          admissionNo?: string;
+          staffNo?: string;
+          phoneNo?: string;
+        };
 
-      let finePerDay = 50; // Undergraduate default
+        const resource = request.resource as {
+          title?: string;
+          authors?: string[];
+          isbn?: string;
+        };
 
-      if (role.includes("postgraduate")) {
-        finePerDay = 100;
-      } else if (
-        role.includes("staff") ||
-        role.includes("librarian") ||
-        role.includes("admin")
-      ) {
-        finePerDay = 200;
-      }
+        const daysLate = getDaysLate(
+          new Date(request.dueDate!)
+        );
 
-      return {
-        ...book.toObject(),
-        daysLate,
-        finePerDay,
-        estimatedFine: daysLate * finePerDay,
-      };
-    });
+        const finePerDay = getFinePerDay(user?.role);
 
-    return NextResponse.json({
-      success: true,
-      count: booksWithFine.length,
-      overdueBooks: booksWithFine,
-    });
+        return {
+          _id: request._id,
+          title: resource?.title || "Unknown Book",
+          author:
+            resource?.authors?.join(", ") ||
+            "Unknown author",
+          isbn: resource?.isbn || "-",
+          dueDate: request.dueDate,
+          daysLate,
+          finePerDay,
+          estimatedFine: daysLate * finePerDay,
+
+          user: {
+            fullName: user?.fullName || "Unknown Borrower",
+            email: user?.email || "-",
+            role: user?.role || "-",
+            admissionNo: user?.admissionNo,
+            staffNo: user?.staffNo,
+            phoneNo: user?.phoneNo,
+          },
+        };
+      });
+
+    return NextResponse.json(
+      {
+        success: true,
+        overdueBooks,
+      },
+      { status: 200 }
+    );
   } catch (error) {
-    console.error("OVERDUE BOOKS ERROR:", error);
+    console.error("GET OVERDUE BOOKS ERROR:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message: "Failed to fetch overdue books",
+        message: "Failed to fetch overdue books.",
       },
-      { status: 500 },
+      { status: 500 }
     );
   }
 }

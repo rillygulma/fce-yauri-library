@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
           success: false,
           message: "Email and password required",
         },
-        { status: 400 }
+        { status: 400 },
       );
     }
 
@@ -31,7 +31,7 @@ export async function POST(req: NextRequest) {
           success: false,
           message: "Invalid credentials",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -43,7 +43,7 @@ export async function POST(req: NextRequest) {
           success: false,
           message: "Invalid credentials",
         },
-        { status: 401 }
+        { status: 401 },
       );
     }
 
@@ -62,10 +62,16 @@ export async function POST(req: NextRequest) {
           fullName: user.fullName,
           email: user.email,
           role: user.role,
+          gender: user.gender,
+          admissionNo: user.admissionNo,
+          staffNo: user.staffNo,
+          department: user.department,
+          college: user.college,
+          phoneNo: user.phoneNo,
           profilePicture: user.profilePicture,
         },
       },
-      { status: 200 }
+      { status: 200 },
     );
 
     response.cookies.set("token", token, {
@@ -84,7 +90,7 @@ export async function POST(req: NextRequest) {
         success: false,
         message: "Server Error",
       },
-      { status: 500 }
+      { status: 500 },
     );
   }
 }

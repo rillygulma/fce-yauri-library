@@ -468,7 +468,7 @@ export default function AdminDashboard() {
             />
 
             <div>
-              <h1 className="text-2xl font-bold text-blue-700">FCE Yauri Admin</h1>
+              <h1 className="text-2xl font-bold text-red-900">FCE Yauri Admin</h1>
               <p className="text-sm text-gray-500">Management Dashboard</p>
             </div>
           </div>
@@ -512,7 +512,7 @@ export default function AdminDashboard() {
             {
               icon: ClipboardList,
               label: "Return Borrowed Books",
-              path: "/admin/return-borrowedBook",
+              path: "/librarian/return-book",
             },
             {
               icon: ClipboardList,
@@ -539,8 +539,8 @@ export default function AdminDashboard() {
               key={index}
               href={item.path}
               className={`flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition-all duration-300 ${index === 0
-                  ? "bg-blue-600 text-white shadow-lg"
-                  : "text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+                  ? "bg-red-900 text-white shadow-lg"
+                  : "text-gray-700 hover:bg-blue-50 hover:text-red-900"
                 }`}
             >
               <div className="relative">
@@ -576,7 +576,7 @@ export default function AdminDashboard() {
 
         {/* Bottom Card */}
         <div className="p-4">
-          <div className="rounded-2xl bg-blue-600 p-5 text-white shadow-xl">
+          <div className="rounded-2xl bg-red-900 p-5 text-white shadow-xl">
             <h2 className="text-lg font-semibold">Need Help?</h2>
             <p className="mt-2 text-sm text-blue-100">
               Contact the ICT department for technical assistance.
@@ -602,7 +602,7 @@ export default function AdminDashboard() {
             </button>
 
             <div>
-              <h2 className="text-xl font-bold text-blue-700 sm:text-2xl">
+              <h2 className="text-xl font-bold text-red-900 sm:text-2xl">
                 Dashboard Overview
               </h2>
               <p className="text-sm text-gray-500">
@@ -623,11 +623,11 @@ export default function AdminDashboard() {
 
             <button className="relative rounded-xl bg-gray-100 p-3 hover:bg-gray-200">
               <Bell className="h-5 w-5 text-gray-700" />
-              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-500"></span>
+              <span className="absolute right-2 top-2 h-2 w-2 rounded-full bg-red-900"></span>
             </button>
 
             <div className="flex items-center gap-3 rounded-2xl bg-gray-100 px-3 py-2">
-              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-blue-600 font-bold text-white">
+              <div className="flex h-10 w-10 items-center justify-center rounded-full bg-red-900 font-bold text-white">
                 {currentUser?.fullName?.charAt(0) || "A"}
               </div>
 
@@ -715,7 +715,7 @@ export default function AdminDashboard() {
 
                 <Link
                   href="/register"
-                  className="rounded-2xl bg-blue-600 px-5 py-3 text-sm font-semibold text-white transition hover:bg-blue-700"
+                  className="rounded-2xl bg-red-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-green-700"
                 >
                   Add New User
                 </Link>
@@ -777,7 +777,7 @@ export default function AdminDashboard() {
 
                       <td className="py-5">
                         <div className="flex items-center gap-3">
-                          <button className="rounded-xl bg-blue-100 p-3 text-blue-700">
+                          <button className="rounded-xl bg-blue-100 p-3 text-red-900">
                             <Eye className="h-4 w-4" />
                           </button>
 
@@ -921,7 +921,7 @@ export default function AdminDashboard() {
 
               <button
                 onClick={updateUser}
-                className="rounded-2xl bg-blue-600 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
+                className="rounded-2xl bg-red-900 px-6 py-3 font-semibold text-white transition hover:bg-blue-700"
               >
                 Save Changes
               </button>

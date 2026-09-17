@@ -103,11 +103,19 @@ export default function LoginPage() {
       }
 
       // ✅ safe user normalization
+      // ================= SAFE USER NORMALIZATION =================
+
       const safeUser = {
         _id: user._id?.toString?.() || user._id,
         fullName: user.fullName || "",
         role: user.role || "student",
         email: user.email || "",
+        gender: user.gender || "",
+        admissionNo: user.admissionNo || "",
+        staffNo: user.staffNo || "",
+        department: user.department || "",
+        college: user.college || "",
+        phoneNo: user.phoneNo || "",
         profilePicture: user.profilePicture || "",
       };
 
@@ -115,24 +123,32 @@ export default function LoginPage() {
         throw new Error("User ID missing from server response");
       }
 
-      // ✅ store user properly
       // Store complete user
-      localStorage.setItem("user", JSON.stringify(safeUser));
+      localStorage.setItem(
+        "user",
+        JSON.stringify(safeUser)
+      );
 
       // Store user ID separately for borrowing
-      localStorage.setItem("userId", safeUser._id);
+      localStorage.setItem(
+        "userId",
+        safeUser._id
+      );
 
       toast.success("Login successful");
 
       // ================= ROLE ROUTING =================
+
       setTimeout(() => {
         switch (safeUser.role) {
           case "admin":
             router.push("/admin-dashboard");
             break;
+
           case "librarian":
             router.push("/librarian-dashboard");
             break;
+
           case "staff":
           case "student":
           default:
@@ -198,9 +214,8 @@ export default function LoginPage() {
                 placeholder="Email Address"
                 value={form.email}
                 onChange={handleChange}
-                className={`input ${
-                  errors.email ? "border-red-500 focus:ring-red-200" : ""
-                }`}
+                className={`input ${errors.email ? "border-red-500 focus:ring-red-200" : ""
+                  }`}
               />
 
               {errors.email && (
@@ -216,9 +231,8 @@ export default function LoginPage() {
                 placeholder="Password"
                 value={form.password}
                 onChange={handleChange}
-                className={`input ${
-                  errors.password ? "border-red-500 focus:ring-red-200" : ""
-                }`}
+                className={`input ${errors.password ? "border-red-500 focus:ring-red-200" : ""
+                  }`}
               />
 
               {errors.password && (
