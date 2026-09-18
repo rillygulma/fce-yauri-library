@@ -500,11 +500,6 @@ export default function AdminDashboard() {
               path: "/admin/resources/add",
             },
             {
-              icon: BookOpen,
-              label: "Borrow Books",
-              path: "/opac",
-            },
-            {
               icon: ClipboardList,
               label: "View Books Requests",
               path: "/librarian/borrow-requests",

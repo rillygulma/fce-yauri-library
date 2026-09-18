@@ -573,7 +573,7 @@ export default function UserDashboard() {
 
           {/* STAFF ONLY */}
 
-          {userRole === "staff" && (
+          {/* {userRole === "staff" && (
             <Link
               href="/librarian/borrow-requests"
               onClick={() =>
@@ -584,7 +584,7 @@ export default function UserDashboard() {
               <ClipboardList className="h-5 w-5" />
               Borrow Requests
             </Link>
-          )}
+          )} */}
 
           {/* LOGOUT */}
 
