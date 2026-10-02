@@ -234,15 +234,6 @@ export default function LoginPage() {
               {errors.password && (
                 <p className="mt-2 text-sm text-red-500">{errors.password}</p>
               )}
-              <div className="mt-2 text-right">
-                <button
-                  type="button"
-                  onClick={() => router.push("/forgot-password")}
-                  className="text-sm font-medium text-[#003566] hover:underline"
-                >
-                  Forgot Password?
-                </button>
-              </div>
             </div>
           </div>
 
