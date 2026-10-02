@@ -5,7 +5,7 @@ const LibraryMembership = () => {
     <div className="min-h-screen py-8 px-4 md:px-20">
       {/* Page Title */}
       <h1 className="text-4xl md:text-5xl mt-10 font-bold text-center text-blue-700 mb-16">
-        FCE Yauri Library Information
+        FCE (T) Yauri Library Information
       </h1>
 
       {/* Membership Section */}
@@ -40,7 +40,7 @@ const LibraryMembership = () => {
 
         <p className="mb-4 text-gray-700">
           Registration is mandatory for all staff and students. Only registered
-          individuals may use library resources.
+          members will be allowed to use library resources.
         </p>
 
         <p className="mb-4 text-gray-700">
@@ -55,15 +55,15 @@ const LibraryMembership = () => {
         </p>
 
         <ul className="list-disc ml-6 space-y-1 text-gray-800">
-          <li>Senior Staff – 10 tickets</li>
-          <li>Students – 4 tickets</li>
+          <li>Senior Staff – 5 tickets</li>
+          <li>Students – 3 tickets</li>
         </ul>
       </section>
 
       {/* Material Organization */}
       <section className="mb-16">
         <h2 className="text-3xl font-semibold text-blue-700 mb-4 border-b pb-2">
-          System of Organizing Library Materials
+         Organizing Library Materials
         </h2>
 
         <p className="text-gray-700">
@@ -149,14 +149,13 @@ const LibraryMembership = () => {
 
         <ul className="list-disc ml-6 space-y-2 text-gray-800">
           <li>Find if a book is available</li>
-          <li>Browse by author or title</li>
-          <li>Browse by subject</li>
+          <li>Search Book by author or title</li>
+          <li>Search Book by subject or ISBN</li>
           <li>Retrieve needed books efficiently</li>
         </ul>
 
         <p className="mt-4 text-gray-700">
-          FCE Yauri uses a physical Card Catalogue arranged alphabetically. OPAC is
-          being developed.
+          FCE (T) Yauri uses a physical Card Catalogue arranged alphabetically and OPAC.
         </p>
       </section>
     </div>

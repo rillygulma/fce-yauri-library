@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter } from "next/navigation";
 import { useTypewriter } from "react-simple-typewriter";
 
 import { Swiper, SwiperSlide } from "swiper/react";
@@ -54,6 +55,22 @@ const HomePage = () => {
 
   // LOADING STATE
   const [isLoading, setIsLoading] = useState(true);
+  const router = useRouter();
+  // SEARCH STATE
+  const [searchQuery, setSearchQuery] = useState("");
+  // SEARCH HANDLER
+  const handleSearch = (e: React.FormEvent<HTMLFormElement>) => {
+    e.preventDefault();
+
+    const query = searchQuery.trim();
+
+    if (!query) {
+      router.push("/opac");
+      return;
+    }
+
+    router.push(`/opac?query=${encodeURIComponent(query)}`);
+  };
 
   // LOADING EFFECT
   useEffect(() => {
@@ -123,7 +140,7 @@ const HomePage = () => {
         },
         {
           sublink: "History",
-          subpath: "#",
+          subpath: "/history",
         },
         {
           sublink: "Mission & Vision",
@@ -144,7 +161,7 @@ const HomePage = () => {
       path: "",
       submenu: [
         {
-          sublink: "FCE Yauri AI I Know Everything",
+          sublink: "FCE (T) Yauri AI I Know Everything",
           subpath: "/research-ai",
         },
         {
@@ -170,7 +187,7 @@ const HomePage = () => {
       path: "",
       submenu: [
         {
-          sublink: "Fubk AI Librarian",
+          sublink: "FCE (T) Yauri AI Librarian",
           subpath: "/ai-chatbot",
         },
         {
@@ -183,7 +200,7 @@ const HomePage = () => {
         },
       ],
     },
-    
+
     {
       link: "News & Events",
       path: "/events",
@@ -193,55 +210,7 @@ const HomePage = () => {
       path: "/contact-us",
     },
   ];
-
-  // LOADING SCREEN
-  if (isLoading) {
-    return (
-      <div className="flex h-screen w-full items-center justify-center bg-white">
-        <motion.div
-          initial={{ scale: 0.5, opacity: 0 }}
-          animate={{
-            scale: 1,
-            opacity: 1,
-            rotate: 360,
-          }}
-          transition={{
-            duration: 2,
-            repeat: Infinity,
-            ease: "linear",
-          }}
-          className="flex flex-col items-center"
-        >
-          <Image
-            src="/images/fce-logo.jpeg"
-            alt="FCE Logo"
-            width={140}
-            height={140}
-            className="rounded-full shadow-2xl"
-          />
-
-          <motion.h1
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: 0.5 }}
-            className="mt-6 text-center text-2xl font-bold uppercase text-blue-700"
-          >
-            FCE, Yauri Library Complex
-          </motion.h1>
-
-          <motion.p
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            transition={{ delay: 1 }}
-            className="mt-2 text-gray-600"
-          >
-            Loading Homepage...
-          </motion.p>
-        </motion.div>
-      </div>
-    );
-  }
-
+  
   return (
     <AnimatePresence mode="wait">
       <motion.div
@@ -266,7 +235,7 @@ const HomePage = () => {
                     />
 
                     <span className="hidden text-sm font-bold leading-6 text-white md:block lg:text-lg">
-                      F.C.E, YAURI
+                      F.C.E (T), YAURI
                       <br />
                       LIBRARY COMPLEX
                     </span>
@@ -418,24 +387,36 @@ const HomePage = () => {
                 <h1 className="text-4xl font-bold uppercase leading-tight text-red-900 md:text-5xl">
                   {text}
                 </h1>
-
-                <p className="text-lg leading-8 text-gray-700 md:w-4/5">
-                  Federal College of Education (Technical), Yauri Library was established in
-                  2025 to support the College in achieving its goals of
-                  teaching, learning, and research.
+                <p className="text-4xl font-semibold text-black">
+                  LIBRARY MANAGEMENT SOFTWARE
                 </p>
 
-                {/* SEARCH BAR */}
-                <div className="flex w-full max-w-lg items-center overflow-hidden rounded-lg bg-white shadow-md">
-                  <input
-                    type="text"
-                    placeholder="Search books, authors, journals..."
-                    className="w-full px-4 py-3 outline-none"
-                  />
-                  <button className="bg-red-900 px-5 py-3 text-white hover:bg-red-900">
-                    Search
+                <Link href="/opac">
+                  <button className="rounded-lg bg-black text-4xl text-white transition hover:bg-red-900 mb-6">
+                    OPAC (Online Public Access Catalogue)
                   </button>
-                </div>
+                </Link>
+                {/* SEARCH BAR */}
+                <form
+                  onSubmit={handleSearch}
+                  className="flex w-full max-w-lg items-center overflow-hidden rounded-lg bg-white shadow-md"
+                >
+                  <input
+                    type="search"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    placeholder="Search by title, subject, author, ISBN..."
+                    className="w-full px-4 py-3 text-gray-900 outline-none"
+                    aria-label="Search library catalogue"
+                  />
+
+                  <button
+                    type="submit"
+                    className="bg-red-900 px-5 py-3 text-sm font-semibold text-white transition hover:bg-red-800"
+                  >
+                    SEARCH
+                  </button>
+                </form>
 
                 {/* MAIN BUTTON */}
                 <Link href="/welcomeNote">

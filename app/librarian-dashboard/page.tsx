@@ -13,6 +13,7 @@ import {
   MessageCircle,
   ClipboardList,
 } from "lucide-react";
+import { RiLockPasswordLine } from "react-icons/ri";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -202,11 +203,18 @@ export default function LibrarianDashboard() {
               label: "Create Announcements",
               path: "/admin/announcements",
             },
-            {
-              icon: MessageCircle,
-              label: "Contact us Messages",
-              path: "/admin/contact-messages",
-            },
+              {
+                icon: MessageCircle,
+                label: "Contact us Messages",
+                path: "/admin/contact-messages",
+              },
+              {
+                icon: RiLockPasswordLine,
+                label: "Change Password",
+                path: "/change-password",
+              },
+
+
           ].map((item, index) => (
             <Link
               key={index}

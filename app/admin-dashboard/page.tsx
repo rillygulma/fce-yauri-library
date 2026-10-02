@@ -18,6 +18,7 @@ import {
   MessageCircle,
   ClipboardList,
 } from "lucide-react";
+import { RiLockPasswordLine } from "react-icons/ri";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -529,6 +530,11 @@ export default function AdminDashboard() {
               label: "Contact Us Message",
               path: "/admin/contact-messages",
             },
+            {
+              icon: RiLockPasswordLine,
+              label: "Change Password",
+              path: "/change-password",
+            }
           ].map((item, index) => (
             <Link
               key={index}
@@ -702,7 +708,7 @@ export default function AdminDashboard() {
                   onChange={(e) => setRoleFilter(e.target.value)}
                   className="rounded-2xl border bg-gray-50 px-4 py-3 text-sm outline-none"
                 >
-                  <option value="all">Category</option>
+                  <option value="all">User Category</option>
                   <option value="admin">Admin</option>
                   <option value="staff">Staff</option>
                   <option value="student">Student</option>
@@ -725,7 +731,7 @@ export default function AdminDashboard() {
                       User
                     </th>
                     <th className="pb-4 text-sm font-semibold text-gray-500">
-                      Role
+                      User Category
                     </th>
                     <th className="pb-4 text-sm font-semibold text-gray-500">
                       Actions

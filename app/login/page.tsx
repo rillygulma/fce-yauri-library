@@ -124,16 +124,10 @@ export default function LoginPage() {
       }
 
       // Store complete user
-      localStorage.setItem(
-        "user",
-        JSON.stringify(safeUser)
-      );
+      localStorage.setItem("user", JSON.stringify(safeUser));
 
       // Store user ID separately for borrowing
-      localStorage.setItem(
-        "userId",
-        safeUser._id
-      );
+      localStorage.setItem("userId", safeUser._id);
 
       toast.success("Login successful");
 
@@ -214,8 +208,9 @@ export default function LoginPage() {
                 placeholder="Email Address"
                 value={form.email}
                 onChange={handleChange}
-                className={`input ${errors.email ? "border-red-500 focus:ring-red-200" : ""
-                  }`}
+                className={`input ${
+                  errors.email ? "border-red-500 focus:ring-red-200" : ""
+                }`}
               />
 
               {errors.email && (
@@ -231,13 +226,23 @@ export default function LoginPage() {
                 placeholder="Password"
                 value={form.password}
                 onChange={handleChange}
-                className={`input ${errors.password ? "border-red-500 focus:ring-red-200" : ""
-                  }`}
+                className={`input ${
+                  errors.password ? "border-red-500 focus:ring-red-200" : ""
+                }`}
               />
 
               {errors.password && (
                 <p className="mt-2 text-sm text-red-500">{errors.password}</p>
               )}
+              <div className="mt-2 text-right">
+                <button
+                  type="button"
+                  onClick={() => router.push("/forgot-password")}
+                  className="text-sm font-medium text-[#003566] hover:underline"
+                >
+                  Forgot Password?
+                </button>
+              </div>
             </div>
           </div>
 

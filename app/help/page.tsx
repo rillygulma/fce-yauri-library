@@ -12,61 +12,52 @@ interface FAQItem {
 
 const faqs: Omit<FAQItem, "isOpen">[] = [
   {
-    question: "How can I gain access to use the Library?",
+    question: "How can I access the Library?",
     answer:
-      "Students and staff of the Federal College of Education Yauri can gain access with their university identification cards.",
+      "Students and staff of the Federal College of Education Technical Yauri can gain access by registering with the library.",
   },
   {
     question: "How can I find materials in the Library?",
     answer:
-      "Use the Traditional Card Catalogue or the Online Public Access Catalogue (OPAC). They contain all materials held by the Library.",
+      "Use Card Catalogue or the Online Public Access Catalogue (OPAC).",
   },
   {
-    question: "How can I obtain my Library Card?",
+    question: "How can I obtain my Library ID Card?",
     answer:
       "Visit the Circulation Desk at the Main Library",
   },
   {
     question:
-      "Can I ask someone else to check out a book with my Library Card?",
+      "Can I ask someone to use my Library ID Card?",
     answer:
-      "No. Library cards are non-transferable. Misuse will result in confiscation.",
+      "No. Library ID cards are not transferable.",
   },
   {
-    question: "How many items can I borrow?",
+    question: "How many Books can I borrow at a time?",
     answer:
-      "Studenta – 6 items\nStaff – 10 items",
+      "Students – up to 3 Books\nStaff – up to 5 Books",
   },
   {
-    question: "What is the loan duration for items checked out?",
+    question: "What is the loan duration for Books Borrowed?",
     answer:
-      "Student: 2 weeks (renewable twice). Staff: 1 month (renewable twice).",
+      "Student: 1 week (renewable). Staff: 2 weeks (renewable).",
   },
   {
-    question: "How do I locate a book using the catalogue?",
-    answer: `1. Identify the author, title or subject.\n2. Check the Catalogue alphabetically.\n3. Note the class mark on the card.\n4. Use the class mark to find the book on the shelves.\n5. Ask library staff if you need help.`,
+    question: "How can I locate a book using the catalogue?",
+    answer: `1. Search book author, title or subject.\n2. Check the Catalogue alphabetically.\n3. Ask library staff if you need help.`,
   },
   {
     question: "What are the procedures for borrowing books?",
-    answer: `• Borrow from the Loan Counter using Library tickets.\n• Present your Library ID and ticket.\n• Sign the book card.\n• Book will be stamped with return date.\n• Ensure return and ticket recovery.\n• Late returns attract fines.`,
+    answer: `• Borrow from the Loan Counter using borrowers tickets.\n• Present your Library ID and tickets.\n• Sign the book card.\n• Book will be stamped with return date.\n• Ensure return and ticket recovery.\n• Late returns attract fines.`,
   },
   {
     question: "Can I borrow books during vacation?",
     answer:
-      "Yes. With HOD’s request and Librarian approval. Must return within the first week of resumption.",
+      "Yes.",
   },
   {
     question: "What are the library fines and penalties?",
-    answer: `Overdue: ₦50/day (Students), ₦200/day (Staff)\nDamage: Repair cost\nLoss: Cost + ₦5,000 surcharge\nLoss of ID/Ticket: Only replaced on special grounds\nBook Recall: Return within 3 days`,
-  },
-  {
-    question: "What are the Library rules and regulations?",
-    answer: `• No noise, eating or sleeping\n• Return books before sessions end\n• Mobile phones must be off\n• Bags kept at owner's risk\n• Theft attracts EXPULSION\n• Comply with all library staff\n• Do not tamper with electronics`,
-  },
-  {
-    question: "What is the Inter-library loan & referral service?",
-    answer:
-      "You can request materials from other Nigerian libraries via inter-library cooperation. Referral to those libraries is also possible.",
+    answer: `Overdue: ₦50/day per book (Students), ₦100/day per book (Staff)`,
   },
   {
     question: "What if I lose my Library ID Card or Borrowing Tickets?",
@@ -75,7 +66,7 @@ const faqs: Omit<FAQItem, "isOpen">[] = [
   {
     question: "What if I damage or lose other Library materials?",
     answer:
-      "Loss or damage of any other library items or materials will attract an appropriate fine or penalty as determined by the College Librarian.",
+      "Loss or damage of any library materials will be paid for.",
   },
 ];
 

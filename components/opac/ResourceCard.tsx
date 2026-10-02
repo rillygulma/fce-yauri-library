@@ -3,8 +3,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { useState } from "react";
-import { useRouter } from "next/navigation";
-
+import { usePathname, useRouter } from "next/navigation";
 import {
   ArrowRight,
   BookMarked,
@@ -33,7 +32,9 @@ function getResourceUrl(resource: Resource) {
    RESOURCE LABEL
 ================================================================ */
 
-function getResourceLabel(type: Resource["resourceType"]) {
+function getResourceLabel(
+  type: Resource["resourceType"]
+) {
   switch (type) {
     case "question-paper":
       return "Question Paper";
@@ -56,6 +57,18 @@ function getResourceLabel(type: Resource["resourceType"]) {
 }
 
 /* ================================================================
+   STORED USER TYPE
+================================================================ */
+
+interface StoredUser {
+  _id?: string;
+  id?: string;
+  fullName?: string;
+  email?: string;
+  role?: string;
+}
+
+/* ================================================================
    RESOURCE CARD
 ================================================================ */
 
@@ -63,10 +76,13 @@ export default function ResourceCard({
   resource,
 }: ResourceCardProps) {
   const router = useRouter();
+  const pathname = usePathname();
 
   const [borrowing, setBorrowing] = useState(false);
-  const [borrowMessage, setBorrowMessage] = useState("");
-  const [borrowSuccess, setBorrowSuccess] = useState(false);
+  const [borrowMessage, setBorrowMessage] =
+    useState("");
+  const [borrowSuccess, setBorrowSuccess] =
+    useState(false);
   const [showLoginButton, setShowLoginButton] =
     useState(false);
 
@@ -85,9 +101,10 @@ export default function ResourceCard({
   const handleBorrow = async () => {
     if (borrowing) return;
 
-    /*
-     * Only books can be borrowed
-     */
+    /* --------------------------------------------------------------
+       ONLY BOOKS CAN BE BORROWED
+    -------------------------------------------------------------- */
+
     if (resource.resourceType !== "book") {
       setBorrowSuccess(false);
       setBorrowMessage(
@@ -97,9 +114,10 @@ export default function ResourceCard({
       return;
     }
 
-    /*
-     * Check availability
-     */
+    /* --------------------------------------------------------------
+       CHECK AVAILABILITY
+    -------------------------------------------------------------- */
+
     if (!isAvailable) {
       setBorrowSuccess(false);
       setBorrowMessage(
@@ -109,18 +127,17 @@ export default function ResourceCard({
       return;
     }
 
-    /*
-     * Reset previous message
-     */
+    /* --------------------------------------------------------------
+       RESET PREVIOUS MESSAGE
+    -------------------------------------------------------------- */
+
     setBorrowMessage("");
     setBorrowSuccess(false);
     setShowLoginButton(false);
 
-    /*
-     * ================================================================
-     * CHECK LOGIN
-     * ================================================================
-     */
+    /* ==============================================================
+       CHECK LOGIN
+    ============================================================== */
 
     const storedUser =
       localStorage.getItem("user");
@@ -128,27 +145,28 @@ export default function ResourceCard({
     if (!storedUser) {
       setBorrowSuccess(false);
       setBorrowMessage(
-        "Please login to your account before requesting a book."
+        "Please login to your account before requesting this book."
       );
       setShowLoginButton(true);
       return;
     }
 
-    /*
-     * ================================================================
-     * PARSE USER
-     * ================================================================
-     */
+    /* ==============================================================
+       PARSE USER
+    ============================================================== */
 
-    let parsedUser: {
-      _id?: string;
-    };
+    let parsedUser: StoredUser;
 
     try {
-      parsedUser = JSON.parse(storedUser) as {
-        _id?: string;
-      };
-    } catch {
+      parsedUser = JSON.parse(
+        storedUser
+      ) as StoredUser;
+    } catch (error) {
+      console.error(
+        "INVALID STORED USER:",
+        error
+      );
+
       localStorage.removeItem("user");
 
       setBorrowSuccess(false);
@@ -159,16 +177,20 @@ export default function ResourceCard({
       return;
     }
 
-    /*
-     * ================================================================
-     * CHECK USER ID
-     * ================================================================
-     */
+    /* ==============================================================
+       GET USER ID
+    ============================================================== */
 
     const userId =
       typeof parsedUser._id === "string"
         ? parsedUser._id.trim()
-        : "";
+        : typeof parsedUser.id === "string"
+          ? parsedUser.id.trim()
+          : "";
+
+    /* ==============================================================
+       CHECK USER ID
+    ============================================================== */
 
     if (!userId) {
       localStorage.removeItem("user");
@@ -181,11 +203,9 @@ export default function ResourceCard({
       return;
     }
 
-    /*
-     * ================================================================
-     * SUBMIT BORROW REQUEST
-     * ================================================================
-     */
+    /* ==============================================================
+       SUBMIT BORROW REQUEST
+    ============================================================== */
 
     try {
       setBorrowing(true);
@@ -236,6 +256,20 @@ export default function ResourceCard({
     } finally {
       setBorrowing(false);
     }
+  };
+
+  /* ================================================================
+     LOGIN REDIRECT
+  ================================================================= */
+
+  const handleLogin = () => {
+    const redirectUrl = encodeURIComponent(
+      pathname
+    );
+
+    router.push(
+      `/login?redirect=${redirectUrl}`
+    );
   };
 
   return (
@@ -319,7 +353,8 @@ export default function ResourceCard({
             {resourceLabel}
           </span>
 
-          {resource.resourceType === "book" && (
+          {resource.resourceType ===
+            "book" && (
             <span
               className={`
                 rounded-full
@@ -383,7 +418,9 @@ export default function ResourceCard({
                 />
 
                 <span>
-                  {resource.authors.join(", ")}
+                  {resource.authors.join(
+                    ", "
+                  )}
                 </span>
               </p>
             )}
@@ -494,7 +531,8 @@ export default function ResourceCard({
 
         {/* BOOK AVAILABILITY */}
 
-        {resource.resourceType === "book" && (
+        {resource.resourceType ===
+          "book" && (
           <div className="mt-5 flex flex-wrap items-center gap-3">
             <span className="text-sm text-gray-500">
               Available copies:
@@ -511,12 +549,15 @@ export default function ResourceCard({
                 text-gray-700
               "
             >
-              {resource.availableCopies ?? 0}
+              {resource.availableCopies ??
+                0}
             </span>
           </div>
         )}
 
-        {/* BORROW MESSAGE */}
+        {/* ==========================================================
+            BORROW MESSAGE
+        ========================================================== */}
 
         {borrowMessage && (
           <div
@@ -553,9 +594,7 @@ export default function ResourceCard({
                 {showLoginButton && (
                   <button
                     type="button"
-                    onClick={() =>
-                      router.push("/login")
-                    }
+                    onClick={handleLogin}
                     className="
                       mt-3
                       inline-flex
@@ -580,7 +619,9 @@ export default function ResourceCard({
           </div>
         )}
 
-        {/* ACTION BUTTONS */}
+        {/* ==========================================================
+            ACTION BUTTONS
+        ========================================================== */}
 
         <div
           className="
@@ -621,11 +662,14 @@ export default function ResourceCard({
 
           {/* BORROW BOOK */}
 
-          {resource.resourceType === "book" && (
+          {resource.resourceType ===
+            "book" && (
             <button
               type="button"
               onClick={handleBorrow}
-              disabled={borrowing || !isAvailable}
+              disabled={
+                borrowing || !isAvailable
+              }
               className="
                 inline-flex
                 items-center
@@ -652,8 +696,8 @@ export default function ResourceCard({
               {borrowing
                 ? "Submitting..."
                 : isAvailable
-                ? "Borrow Me"
-                : "Unavailable"}
+                  ? "Borrow Me"
+                  : "Unavailable"}
             </button>
           )}
         </div>

@@ -22,13 +22,13 @@ const ServicesPage = () => {
           <div className="w-full max-w-2xl rounded-lg bg-white p-6 shadow-md">
             <ul className="space-y-4 text-sm sm:text-lg font-semibold">
               {[
-                ["Monday", "8:00AM - 10:00PM"],
-                ["Tuesday", "8:00AM - 10:00PM"],
-                ["Wednesday", "8:00AM - 10:00PM"],
-                ["Thursday", "8:00AM - 10:00PM"],
-                ["Friday", "8:00AM - 1:00PM"],
-                ["Re-Open", "4:00PM - 10:00PM"],
-                ["Saturday", "9:00AM - 6:00PM"],
+                ["Monday", "8:00AM - 4:00PM"],
+                ["Tuesday", "8:00AM - 4:00PM"],
+                ["Wednesday", "8:00AM - 4:00PM"],
+                ["Thursday", "8:00AM - 4:00PM"],
+                ["Friday", "8:00AM - 4:00PM"],
+          
+                ["Saturday", "CLOSED"],
               ].map(([day, time]) => (
                 <li key={day} className="flex justify-between">
                   <span className="text-gray-800">{day}</span>
@@ -66,7 +66,7 @@ const ServicesPage = () => {
 
               <li className="flex justify-between">
                 <span>Saturday</span>
-                <span>9:00AM – 2:00PM</span>
+                <span>CLOSED</span>
               </li>
 
               <li className="flex justify-between">
@@ -86,7 +86,7 @@ const ServicesPage = () => {
           </h2>
 
           <p className="mx-auto text-lg max-w-3xl text-gray-700">
-            Our library provides in-person and e-reference services through
+            Our library provides e-reference services through
             Chat-A-Librarian, email, and Zoom virtual meetings. To schedule a
             Zoom meeting, please contact the Reference Librarian.
           </p>

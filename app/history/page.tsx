@@ -9,12 +9,11 @@ const HistoryPage = () => {
 
       <p className="text-lg text-gray-600 leading-relaxed mb-6">
         The Federal College of Education Yauri Library started services to staff,
-        students, and members of the College Community on 1 January, 2025.
+        students, and members of the College Community in 2026.
         Since then, the Library has continued to play a pivotal role in the
         promotion of teaching, learning, and research through the provision of
-        relevant and current information resources in both physical and
-        electronic formats needed by the faculties and departments for their
-        respective academic and research programmes.
+        relevant and current information resources in both printed and
+        electronic forms for their respective academic and research programmes.
       </p>
 
       <p className="text-lg text-gray-600 leading-relaxed mb-6">
@@ -25,12 +24,7 @@ const HistoryPage = () => {
       </p>
 
       <p className="text-lg text-gray-600 leading-relaxed">
-        Currently, the Library’s collection is over twelve thousand volumes,
-        consisting of eight thousand eight hundred and fifty (8,850) volumes of
-        books and three thousand one hundred and fifty (3,150) volumes of
-        periodicals. In addition, the collection also contains a sizeable number
-        of undergraduate research projects, theses, and dissertations in both
-        physical and electronic formats.
+        Currently, the Library’s collection is growing.
       </p>
 
       <p className="text-lg text-gray-600 leading-relaxed mt-6">

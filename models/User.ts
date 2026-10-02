@@ -17,6 +17,15 @@ const UserSchema = new Schema(
       type: String,
       required: true,
     },
+    resetPasswordToken: {
+      type: String,
+      default: null,
+    },
+
+    resetPasswordExpires: {
+      type: Date,
+      default: null,
+    },
 
     role: {
       type: String,
@@ -68,11 +77,12 @@ const UserSchema = new Schema(
     profilePicture: {
       type: String,
       default: "",
+      required: true,
     },
   },
   {
     timestamps: true,
-  }
+  },
 );
 
 const User = models.User || model("User", UserSchema);

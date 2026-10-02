@@ -2,171 +2,175 @@ import { NextRequest, NextResponse } from "next/server";
 import { connectDB } from "@/lib/mongodb";
 import Resource from "@/models/Resource";
 
+export const runtime = "nodejs";
+
+function escapeRegex(value: string) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 export async function GET(request: NextRequest) {
   try {
     await connectDB();
 
     const searchParams = request.nextUrl.searchParams;
 
-    const query = searchParams.get("query")?.trim() || "";
-    const type = searchParams.get("type")?.trim() || "";
-    const subject = searchParams.get("subject")?.trim() || "";
-    const available = searchParams.get("available")?.trim() || "";
+    const query = searchParams.get("query")?.trim() ?? "";
+    const type = searchParams.get("type")?.trim() ?? "";
+    const subject = searchParams.get("subject")?.trim() ?? "";
+    const available = searchParams.get("available")?.trim() ?? "";
 
-    const page = Math.max(
-      Number(searchParams.get("page")) || 1,
-      1
+    const requestedPage = Number(
+      searchParams.get("page") ?? "1"
     );
 
-    const limit = Math.min(
-      Math.max(
-        Number(searchParams.get("limit")) || 10,
-        1
-      ),
-      100
+    const requestedLimit = Number(
+      searchParams.get("limit") ?? "10"
     );
+
+    const page =
+      Number.isFinite(requestedPage) && requestedPage > 0
+        ? Math.floor(requestedPage)
+        : 1;
+
+    const limit =
+      Number.isFinite(requestedLimit) && requestedLimit > 0
+        ? Math.min(Math.floor(requestedLimit), 100)
+        : 10;
 
     const skip = (page - 1) * limit;
 
+    /**
+     * ---------------------------------------------------------
+     * BUILD FILTER
+     * ---------------------------------------------------------
+     */
+
     const filter: Record<string, unknown> = {};
 
-    /*
-     * Search across multiple resource fields.
+    /**
+     * ---------------------------------------------------------
+     * SEARCH
+     * ---------------------------------------------------------
      *
-     * Examples:
-     * /api/opac?query=computer
-     * /api/opac?query=John Smith
-     * /api/opac?query=CSC101
-     * /api/opac?query=978123456789
+     * Example:
+     *
+     * HEAT TREATMENT PROCESS AND WELDING TECHNOLOGY
+     *
+     * We split the search into individual words and require
+     * every important word to appear somewhere in the resource.
+     *
+     * This makes searches more flexible:
+     *
+     * "PROCESS" can match "PROCESSES"
+     * "WELDING TECHNOLOGY" can match a longer title
+     * ---------------------------------------------------------
      */
+
     if (query) {
-      filter.$or = [
-        {
-          title: {
-            $regex: query,
+      const searchWords = query
+        .toLowerCase()
+        .split(/\s+/)
+        .map((word) => word.trim())
+        .filter(Boolean)
+        .filter(
+          (word) =>
+            !["and", "or", "the", "a", "an", "of", "in", "for"].includes(
+              word
+            )
+        );
+
+      if (searchWords.length > 0) {
+        filter.$and = searchWords.map((word) => {
+          const escapedWord = escapeRegex(word);
+
+          const searchRegex = {
+            $regex: escapedWord,
             $options: "i",
-          },
-        },
-        {
-          subtitle: {
-            $regex: query,
-            $options: "i",
-          },
-        },
-        {
-          authors: {
-            $regex: query,
-            $options: "i",
-          },
-        },
-        {
-          isbn: {
-            $regex: query,
-            $options: "i",
-          },
-        },
-        {
-          issn: {
-            $regex: query,
-            $options: "i",
-          },
-        },
-        {
-          subject: {
-            $regex: query,
-            $options: "i",
-          },
-        },
-        {
-          keywords: {
-            $regex: query,
-            $options: "i",
-          },
-        },
-        {
-          classificationNumber: {
-            $regex: query,
-            $options: "i",
-          },
-        },
-        {
-          callNumber: {
-            $regex: query,
-            $options: "i",
-          },
-        },
-        {
-          accessionNumber: {
-            $regex: query,
-            $options: "i",
-          },
-        },
-        {
-          courseCode: {
-            $regex: query,
-            $options: "i",
-          },
-        },
-        {
-          courseTitle: {
-            $regex: query,
-            $options: "i",
-          },
-        },
-        {
-          department: {
-            $regex: query,
-            $options: "i",
-          },
-        },
-        {
-          college: {
-            $regex: query,
-            $options: "i",
-          },
-        },
-      ];
+          };
+
+          return {
+            $or: [
+              { title: searchRegex },
+              { authors: searchRegex },
+              { subject: searchRegex },
+              { callNumber: searchRegex },
+              { edition: searchRegex },
+              { publisher: searchRegex },
+              { isbn: searchRegex },
+              { volumeNumber: searchRegex },
+              { issn: searchRegex },
+              { courseCode: searchRegex },
+              { courseTitle: searchRegex },
+              { semester: searchRegex },
+              { session: searchRegex },
+              { college: searchRegex },
+              { department: searchRegex },
+            ],
+          };
+        });
+      }
     }
 
-    /*
-     * Filter by resource type.
-     *
-     * Examples:
-     * /api/opac?type=book
-     * /api/opac?type=journal
-     * /api/opac?type=question-paper
+    /**
+     * ---------------------------------------------------------
+     * RESOURCE TYPE
+     * ---------------------------------------------------------
      */
+
     if (type && type !== "all") {
       filter.resourceType = type;
     }
 
-    /*
-     * Filter by subject.
+    /**
+     * ---------------------------------------------------------
+     * SUBJECT
+     * ---------------------------------------------------------
      */
+
     if (subject) {
+      const escapedSubject = escapeRegex(subject);
+
       filter.subject = {
-        $regex: subject,
+        $regex: escapedSubject,
         $options: "i",
       };
     }
 
-    /*
-     * Show only resources that have available copies.
+    /**
+     * ---------------------------------------------------------
+     * AVAILABILITY
+     * ---------------------------------------------------------
      */
+
     if (available === "true") {
       filter.availableCopies = {
         $gt: 0,
       };
     }
 
-    /*
-     * Get total number of matching resources.
+    /**
+     * ---------------------------------------------------------
+     * DEBUG LOG
+     * ---------------------------------------------------------
      */
+
+    console.log("OPAC QUERY:", query);
+    console.log("OPAC FILTER:", JSON.stringify(filter, null, 2));
+
+    /**
+     * ---------------------------------------------------------
+     * COUNT
+     * ---------------------------------------------------------
+     */
+
     const total = await Resource.countDocuments(filter);
 
-    /*
-     * Get paginated resources.
+    /**
+     * ---------------------------------------------------------
+     * FETCH
+     * ---------------------------------------------------------
      */
+
     const resources = await Resource.find(filter)
       .sort({
         createdAt: -1,
@@ -175,21 +179,29 @@ export async function GET(request: NextRequest) {
       .limit(limit)
       .lean();
 
-    /*
-     * Return OPAC response.
+    /**
+     * ---------------------------------------------------------
+     * PAGINATION
+     * ---------------------------------------------------------
      */
+
+    const pages = total > 0 ? Math.ceil(total / limit) : 0;
+
     return NextResponse.json(
       {
         success: true,
         resources,
+        total,
+        pages,
+        page,
+        limit,
         pagination: {
           total,
           page,
           limit,
-          totalPages: Math.ceil(total / limit),
-          hasNextPage:
-            page < Math.ceil(total / limit),
-          hasPreviousPage: page > 1,
+          totalPages: pages,
+          hasNextPage: page < pages,
+          hasPreviousPage: page > 1 && pages > 0,
         },
       },
       {
@@ -197,16 +209,17 @@ export async function GET(request: NextRequest) {
       }
     );
   } catch (error) {
-    console.error(
-      "OPAC SEARCH ERROR:",
-      error
-    );
+    console.error("OPAC SEARCH ERROR:", error);
 
     return NextResponse.json(
       {
         success: false,
-        message:
-          "Failed to search library catalogue.",
+        resources: [],
+        total: 0,
+        pages: 0,
+        page: 1,
+        limit: 10,
+        message: "Failed to search library catalogue.",
       },
       {
         status: 500,

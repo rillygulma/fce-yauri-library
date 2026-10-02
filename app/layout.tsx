@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { Toaster } from "react-hot-toast";
-
+import BackButton from "@/components/BackButton";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -30,6 +30,8 @@ export default function RootLayout({
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
       <body className="min-h-full flex flex-col bg-teal-100">
+        <BackButton />
+        
         {children}
 
         {/* GLOBAL TOASTER */}

@@ -15,47 +15,31 @@ export interface IResource
   resourceType: ResourceType;
 
   title?: string;
-
   authors?: string[];
-
   subject?: string;
-
   callNumber?: string;
-
   edition?: string;
-
   publicationYear?: number;
-
   publisher?: string;
-
   isbn?: string;
 
   totalCopies?: number;
-
   availableCopies?: number;
-
   borrowedCopies?: number;
 
   volumeNumber?: string;
-
   issn?: string;
 
   courseCode?: string;
-
   courseTitle?: string;
-
   semester?: string;
-
   session?: string;
 
   college?: string;
-
   department?: string;
-
   graduationYear?: number;
 
   coverImage?: string;
-
   digitalFile?: string;
 
   status:
@@ -63,7 +47,6 @@ export interface IResource
     | "unavailable";
 
   createdAt: Date;
-
   updatedAt: Date;
 }
 
@@ -79,26 +62,31 @@ const ResourceSchema =
           "project",
         ],
         required: true,
+        index: true,
       },
 
       title: {
         type: String,
         trim: true,
+        index: true,
       },
 
       authors: {
         type: [String],
         default: [],
+        index: true,
       },
 
       subject: {
         type: String,
         trim: true,
+        index: true,
       },
 
       callNumber: {
         type: String,
         trim: true,
+        index: true,
       },
 
       edition: {
@@ -113,6 +101,7 @@ const ResourceSchema =
       publisher: {
         type: String,
         trim: true,
+        index: true,
       },
 
       isbn: {
@@ -120,6 +109,7 @@ const ResourceSchema =
         trim: true,
         unique: true,
         sparse: true,
+        index: true,
       },
 
       totalCopies: {
@@ -132,6 +122,7 @@ const ResourceSchema =
         type: Number,
         default: 1,
         min: 0,
+        index: true,
       },
 
       borrowedCopies: {
@@ -150,16 +141,19 @@ const ResourceSchema =
         trim: true,
         unique: true,
         sparse: true,
+        index: true,
       },
 
       courseCode: {
         type: String,
         trim: true,
+        index: true,
       },
 
       courseTitle: {
         type: String,
         trim: true,
+        index: true,
       },
 
       semester: {
@@ -170,16 +164,19 @@ const ResourceSchema =
       session: {
         type: String,
         trim: true,
+        index: true,
       },
 
       college: {
         type: String,
         trim: true,
+        index: true,
       },
 
       department: {
         type: String,
         trim: true,
+        index: true,
       },
 
       graduationYear: {
@@ -203,6 +200,7 @@ const ResourceSchema =
           "unavailable",
         ],
         default: "available",
+        index: true,
       },
     },
     {

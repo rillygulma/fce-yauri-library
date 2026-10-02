@@ -15,6 +15,7 @@ import {
   Clock,
   Loader2,
 } from "lucide-react";
+import { RiLockPasswordLine } from "react-icons/ri";
 
 import Link from "next/link";
 import Image from "next/image";
@@ -569,6 +570,17 @@ export default function UserDashboard() {
           >
             <UserRound className="h-5 w-5" />
             My Profile
+          </Link>
+
+          <Link
+            href="/change-password"
+            onClick={() =>
+              setSidebarOpen(false)
+            }
+            className="flex items-center gap-4 rounded-2xl px-4 py-4 text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+          >
+            <RiLockPasswordLine className="h-5 w-5" />
+            Change Password
           </Link>
 
           {/* STAFF ONLY */}
