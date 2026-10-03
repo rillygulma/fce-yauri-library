@@ -507,12 +507,12 @@ export default function AdminDashboard() {
             },
             {
               icon: ClipboardList,
-              label: "Return Borrowed Books",
+              label: "Return Books Borrowed",
               path: "/librarian/return-book",
             },
             {
               icon: ClipboardList,
-              label: "All Borrowed Due Books",
+              label: "OverDue Books",
               path: "/admin/overdue-books",
             },
             {
