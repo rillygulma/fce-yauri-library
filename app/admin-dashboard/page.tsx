@@ -527,7 +527,7 @@ export default function AdminDashboard() {
             },
             {
               icon: MessageCircle,
-              label: "Contact Us Message",
+              label: "Contact Us Messages",
               path: "/admin/contact-messages",
             },
             {
