@@ -33,6 +33,18 @@ const defaultStats = [
     growth: "Registered users",
   },
   {
+    title: "Total Students",
+    value: "0",
+    icon: Users,
+    growth: "Registered students",
+  },
+  {
+    title: "Total Staff",
+    value: "0",
+    icon: Users,
+    growth: "Registered staff members",
+  },
+  {
     title: "Books Borrowed",
     value: "0",
     icon: BookOpen,
@@ -46,7 +58,7 @@ const defaultStats = [
   },
   {
     title: "Active Sessions",
-    value: "1,240",
+    value: "0",
     icon: Activity,
     growth: "Active today",
   },
@@ -191,19 +203,37 @@ export default function AdminDashboard() {
          * We already have users loaded from /api/users.
          */
 
-        const usersResponse = await fetch("/api/users", {
-          cache: "no-store",
-        });
+        // ================= USERS =================
 
-        let totalUsers = 0;
+const usersResponse = await fetch("/api/users", {
+  cache: "no-store",
+});
 
-        if (usersResponse.ok) {
-          const usersData = await usersResponse.json();
+let totalUsers = 0;
+let totalStudents = 0;
+let totalStaff = 0;
 
-          totalUsers = Array.isArray(usersData.users)
-            ? usersData.users.length
-            : 0;
-        }
+if (usersResponse.ok) {
+  const usersData = await usersResponse.json();
+
+  const registeredUsers: User[] = Array.isArray(usersData.users)
+    ? usersData.users
+    : [];
+
+  totalUsers = registeredUsers.length;
+
+  totalStudents = registeredUsers.filter(
+    (user) => user.role?.toLowerCase() === "student"
+  ).length;
+
+  // Count staff and librarians as staff members.
+  // Administrators are excluded from this count.
+  totalStaff = registeredUsers.filter((user) => {
+    const role = user.role?.toLowerCase();
+
+    return role === "staff" || role === "librarian";
+  }).length;
+}
 
         /*
          * ============================================================
@@ -312,31 +342,43 @@ export default function AdminDashboard() {
          */
 
         setStats([
-          {
-            title: "Total Users",
-            value: totalUsers.toLocaleString(),
-            icon: Users,
-            growth: "Registered users",
-          },
-          {
-            title: "Books Borrowed",
-            value: booksBorrowed.toLocaleString(),
-            icon: BookOpen,
-            growth: "Current borrow records",
-          },
-          {
-            title: "Blog Posts",
-            value: blogPosts.toLocaleString(),
-            icon: FileText,
-            growth: "Published posts",
-          },
-          {
-            title: "Active Sessions",
-            value: "1,240",
-            icon: Activity,
-            growth: "Active today",
-          },
-        ]);
+  {
+    title: "Total Users",
+    value: totalUsers.toLocaleString(),
+    icon: Users,
+    growth: "All registered users",
+  },
+  {
+    title: "Total Students",
+    value: totalStudents.toLocaleString(),
+    icon: Users,
+    growth: "Registered students",
+  },
+  {
+    title: "Total Staff",
+    value: totalStaff.toLocaleString(),
+    icon: Users,
+    growth: "Staff and librarians",
+  },
+  {
+    title: "Books Borrowed",
+    value: booksBorrowed.toLocaleString(),
+    icon: BookOpen,
+    growth: "Current borrow records",
+  },
+  {
+    title: "Blog Posts",
+    value: blogPosts.toLocaleString(),
+    icon: FileText,
+    growth: "Published posts",
+  },
+  {
+    title: "Active Sessions",
+    value: "0",
+    icon: Activity,
+    growth: "Connect an activity API for live counts",
+  },
+]);
       } catch (error) {
         console.error(
           "FETCH DASHBOARD STATS ERROR:",
@@ -496,6 +538,11 @@ export default function AdminDashboard() {
               path: "/register",
             },
             {
+              icon: Users,
+              label: "View Users",
+              path: "/admin-dashboard/view-users",
+            },
+            {
               icon: BookOpen,
               label: "Add Resources",
               path: "/admin/resources/add",
@@ -646,7 +693,7 @@ export default function AdminDashboard() {
 
         <div className="p-4 sm:p-6 lg:p-8">
           {/* Stats */}
-          <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
+          <section className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-3">
             {stats.map((stat, index) => (
               <div
                 key={index}
