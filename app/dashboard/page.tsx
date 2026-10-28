@@ -507,7 +507,7 @@ export default function UserDashboard() {
           </Link>
 
           <Link
-            href="/generate-pdf"
+            href="#"
             onClick={() =>
               setSidebarOpen(false)
             }
@@ -515,6 +515,17 @@ export default function UserDashboard() {
           >
             <Bot className="h-5 w-5" />
             AI Generate PDF
+          </Link>
+
+          <Link
+            href="/e-resources"
+            onClick={() =>
+              setSidebarOpen(false)
+            }
+            className="flex items-center gap-4 rounded-2xl px-4 py-4 text-gray-700 hover:bg-blue-50 hover:text-blue-700"
+          >
+            <BookOpen className="h-5 w-5" />
+            E-Resources
           </Link>
 
           <Link
@@ -536,7 +547,7 @@ export default function UserDashboard() {
             className="flex items-center gap-4 rounded-2xl px-4 py-4 text-gray-700 hover:bg-blue-50 hover:text-blue-700"
           >
             <ClipboardList className="h-5 w-5" />
-            Borrowed Books History
+            Borrowing History
           </Link>
 
           <Link

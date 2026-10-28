@@ -205,35 +205,35 @@ export default function AdminDashboard() {
 
         // ================= USERS =================
 
-const usersResponse = await fetch("/api/users", {
-  cache: "no-store",
-});
+        const usersResponse = await fetch("/api/users", {
+          cache: "no-store",
+        });
 
-let totalUsers = 0;
-let totalStudents = 0;
-let totalStaff = 0;
+        let totalUsers = 0;
+        let totalStudents = 0;
+        let totalStaff = 0;
 
-if (usersResponse.ok) {
-  const usersData = await usersResponse.json();
+        if (usersResponse.ok) {
+          const usersData = await usersResponse.json();
 
-  const registeredUsers: User[] = Array.isArray(usersData.users)
-    ? usersData.users
-    : [];
+          const registeredUsers: User[] = Array.isArray(usersData.users)
+            ? usersData.users
+            : [];
 
-  totalUsers = registeredUsers.length;
+          totalUsers = registeredUsers.length;
 
-  totalStudents = registeredUsers.filter(
-    (user) => user.role?.toLowerCase() === "student"
-  ).length;
+          totalStudents = registeredUsers.filter(
+            (user) => user.role?.toLowerCase() === "student",
+          ).length;
 
-  // Count staff and librarians as staff members.
-  // Administrators are excluded from this count.
-  totalStaff = registeredUsers.filter((user) => {
-    const role = user.role?.toLowerCase();
+          // Count staff and librarians as staff members.
+          // Administrators are excluded from this count.
+          totalStaff = registeredUsers.filter((user) => {
+            const role = user.role?.toLowerCase();
 
-    return role === "staff" || role === "librarian";
-  }).length;
-}
+            return role === "staff" || role === "librarian";
+          }).length;
+        }
 
         /*
          * ============================================================
@@ -244,19 +244,14 @@ if (usersResponse.ok) {
         let booksBorrowed = 0;
 
         try {
-          const borrowResponse = await fetch(
-            "/api/borrow-request",
-            {
-              cache: "no-store",
-            }
-          );
+          const borrowResponse = await fetch("/api/borrow-request", {
+            cache: "no-store",
+          });
 
           if (borrowResponse.ok) {
             const borrowData = await borrowResponse.json();
 
-            const requests = Array.isArray(
-              borrowData.borrowRequests
-            )
+            const requests = Array.isArray(borrowData.borrowRequests)
               ? borrowData.borrowRequests
               : Array.isArray(borrowData.requests)
                 ? borrowData.requests
@@ -271,27 +266,19 @@ if (usersResponse.ok) {
              * been issued to the user, this will count it.
              */
 
-            booksBorrowed = requests.filter(
-              (request: {
-                status?: string;
-              }) => {
-                const status =
-                  request.status?.toLowerCase();
+            booksBorrowed = requests.filter((request: { status?: string }) => {
+              const status = request.status?.toLowerCase();
 
-                return (
-                  status === "approved" ||
-                  status === "borrowed" ||
-                  status === "issued" ||
-                  status === "active"
-                );
-              }
-            ).length;
+              return (
+                status === "approved" ||
+                status === "borrowed" ||
+                status === "issued" ||
+                status === "active"
+              );
+            }).length;
           }
         } catch (error) {
-          console.error(
-            "FETCH BORROW REQUESTS ERROR:",
-            error
-          );
+          console.error("FETCH BORROW REQUESTS ERROR:", error);
         }
 
         /*
@@ -303,20 +290,14 @@ if (usersResponse.ok) {
         let blogPosts = 0;
 
         try {
-          const blogResponse = await fetch(
-            "/api/blog",
-            {
-              cache: "no-store",
-            }
-          );
+          const blogResponse = await fetch("/api/blog", {
+            cache: "no-store",
+          });
 
           if (blogResponse.ok) {
-            const blogData =
-              await blogResponse.json();
+            const blogData = await blogResponse.json();
 
-            const posts = Array.isArray(
-              blogData.posts
-            )
+            const posts = Array.isArray(blogData.posts)
               ? blogData.posts
               : Array.isArray(blogData.blogs)
                 ? blogData.blogs
@@ -329,10 +310,7 @@ if (usersResponse.ok) {
             blogPosts = posts.length;
           }
         } catch (error) {
-          console.error(
-            "FETCH BLOG POSTS ERROR:",
-            error
-          );
+          console.error("FETCH BLOG POSTS ERROR:", error);
         }
 
         /*
@@ -342,48 +320,45 @@ if (usersResponse.ok) {
          */
 
         setStats([
-  {
-    title: "Total Users",
-    value: totalUsers.toLocaleString(),
-    icon: Users,
-    growth: "All registered users",
-  },
-  {
-    title: "Total Students",
-    value: totalStudents.toLocaleString(),
-    icon: Users,
-    growth: "Registered students",
-  },
-  {
-    title: "Total Staff",
-    value: totalStaff.toLocaleString(),
-    icon: Users,
-    growth: "Staff and librarians",
-  },
-  {
-    title: "Books Borrowed",
-    value: booksBorrowed.toLocaleString(),
-    icon: BookOpen,
-    growth: "Current borrow records",
-  },
-  {
-    title: "Blog Posts",
-    value: blogPosts.toLocaleString(),
-    icon: FileText,
-    growth: "Published posts",
-  },
-  {
-    title: "Active Sessions",
-    value: "0",
-    icon: Activity,
-    growth: "Connect an activity API for live counts",
-  },
-]);
+          {
+            title: "Total Users",
+            value: totalUsers.toLocaleString(),
+            icon: Users,
+            growth: "All registered users",
+          },
+          {
+            title: "Total Students",
+            value: totalStudents.toLocaleString(),
+            icon: Users,
+            growth: "Registered students",
+          },
+          {
+            title: "Total Staff",
+            value: totalStaff.toLocaleString(),
+            icon: Users,
+            growth: "Staff and librarians",
+          },
+          {
+            title: "Books Borrowed",
+            value: booksBorrowed.toLocaleString(),
+            icon: BookOpen,
+            growth: "Current borrow records",
+          },
+          {
+            title: "Blog Posts",
+            value: blogPosts.toLocaleString(),
+            icon: FileText,
+            growth: "Published posts",
+          },
+          {
+            title: "Active Sessions",
+            value: "0",
+            icon: Activity,
+            growth: "Connect an activity API for live counts",
+          },
+        ]);
       } catch (error) {
-        console.error(
-          "FETCH DASHBOARD STATS ERROR:",
-          error
-        );
+        console.error("FETCH DASHBOARD STATS ERROR:", error);
       } finally {
         setStatsLoading(false);
       }
@@ -497,8 +472,9 @@ if (usersResponse.ok) {
 
       {/* Sidebar */}
       <aside
-        className={`fixed left-0 top-0 z-50 flex h-screen w-72 flex-col bg-white shadow-2xl transition-transform duration-300 lg:translate-x-0 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"
-          }`}
+        className={`fixed left-0 top-0 z-50 flex h-screen w-72 flex-col bg-white shadow-2xl transition-transform duration-300 lg:translate-x-0 ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full"
+        }`}
       >
         <div className="flex items-center justify-between border-b p-6">
           <div className="flex items-center gap-3">
@@ -511,7 +487,9 @@ if (usersResponse.ok) {
             />
 
             <div>
-              <h1 className="text-2xl font-bold text-red-900">FCE Yauri Admin</h1>
+              <h1 className="text-2xl font-bold text-red-900">
+                FCE Yauri Admin
+              </h1>
               <p className="text-sm text-gray-500">Management Dashboard</p>
             </div>
           </div>
@@ -548,6 +526,16 @@ if (usersResponse.ok) {
               path: "/admin/resources/add",
             },
             {
+              icon: BookOpen,
+              label: "Add E-Resources",
+              path: "/admin-dashboard/e-resources",
+            },
+            {
+              icon: BookOpen,
+              label: "E-Resources",
+              path: "/e-resources",
+            },
+            {
               icon: ClipboardList,
               label: "View Books Requests",
               path: "/librarian/borrow-requests",
@@ -581,15 +569,16 @@ if (usersResponse.ok) {
               icon: RiLockPasswordLine,
               label: "Change Password",
               path: "/change-password",
-            }
+            },
           ].map((item, index) => (
             <Link
               key={index}
               href={item.path}
-              className={`flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition-all duration-300 ${index === 0
+              className={`flex w-full items-center gap-4 rounded-2xl px-4 py-4 text-left transition-all duration-300 ${
+                index === 0
                   ? "bg-red-900 text-white shadow-lg"
                   : "text-gray-700 hover:bg-blue-50 hover:text-red-900"
-                }`}
+              }`}
             >
               <div className="relative">
                 <item.icon className="h-5 w-5" />
@@ -701,9 +690,7 @@ if (usersResponse.ok) {
               >
                 <div className="flex items-start justify-between">
                   <div>
-                    <p className="text-sm text-gray-500">
-                      {stat.title}
-                    </p>
+                    <p className="text-sm text-gray-500">{stat.title}</p>
 
                     <h3 className="mt-2 text-3xl font-bold text-gray-800">
                       {statsLoading ? (

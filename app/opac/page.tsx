@@ -1,6 +1,11 @@
 "use client";
-
-import { useCallback, useEffect, useMemo, useState } from "react";
+import {
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   usePathname,
   useRouter,
@@ -28,17 +33,15 @@ export default function OPACPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
 
+  const resultsRef = useRef<HTMLDivElement>(null);
+  const previousSearchRef = useRef<string | null>(null);
+  const shouldScrollRef = useRef(false);
+  const completedSearchRef = useRef<string | null>(null);
+
   /**
-   * --------------------------------------------------------------------------
    * READ VALUES DIRECTLY FROM URL
-   * --------------------------------------------------------------------------
    *
-   * The URL is the single source of truth.
-   *
-   * Example:
-   * /opac?query=HEAT%20TREATMENT&type=book&page=2
-   *
-   * No useEffect + setState is required here.
+   * The URL remains the single source of truth.
    */
 
   const query = useMemo(
@@ -56,13 +59,10 @@ export default function OPACPage() {
     [searchParams]
   );
 
-  const available =
-    searchParams.get("available") === "true";
+  const available = searchParams.get("available") === "true";
 
   const page = useMemo(() => {
-    const urlPage = Number(
-      searchParams.get("page") ?? "1"
-    );
+    const urlPage = Number(searchParams.get("page") ?? "1");
 
     if (!Number.isFinite(urlPage) || urlPage < 1) {
       return 1;
@@ -72,19 +72,27 @@ export default function OPACPage() {
   }, [searchParams]);
 
   /**
-   * --------------------------------------------------------------------------
+   * IDENTIFY THE CURRENT SEARCH AND FILTERS
+   *
+   * Pagination is excluded so changing pages does not
+   * trigger automatic scrolling to the results heading.
+   */
+
+  const searchKey = JSON.stringify([
+    query,
+    type,
+    subject,
+    available,
+  ]);
+
+  /**
    * FETCH OPAC RESOURCES
-   * --------------------------------------------------------------------------
    */
 
   const fetchResources = useCallback(
     async (signal?: AbortSignal) => {
       try {
-        /**
-         * Yield once so setState is not synchronous
-         * with the effect body that invoked this function.
-         * Logic is otherwise unchanged.
-         */
+        // Yield once before updating loading state.
         await Promise.resolve();
 
         if (signal?.aborted) {
@@ -96,37 +104,27 @@ export default function OPACPage() {
 
         const params = new URLSearchParams();
 
-        /**
-         * SEARCH QUERY
-         */
+        // Search query
         if (query) {
           params.set("query", query);
         }
 
-        /**
-         * RESOURCE TYPE
-         */
+        // Resource type
         if (type && type !== "all") {
           params.set("type", type);
         }
 
-        /**
-         * SUBJECT
-         */
+        // Subject
         if (subject) {
           params.set("subject", subject);
         }
 
-        /**
-         * AVAILABILITY
-         */
+        // Availability
         if (available) {
           params.set("available", "true");
         }
 
-        /**
-         * PAGINATION
-         */
+        // Pagination
         params.set("page", String(page));
         params.set("limit", "10");
 
@@ -146,8 +144,7 @@ export default function OPACPage() {
           );
         }
 
-        const data: OPACResponse =
-          await response.json();
+        const data: OPACResponse = await response.json();
 
         if (!data.success) {
           throw new Error(
@@ -176,10 +173,11 @@ export default function OPACPage() {
             ? data.pages
             : 0
         );
+
+        // Record which search successfully completed.
+        completedSearchRef.current = searchKey;
       } catch (error) {
-        /**
-         * Ignore AbortController cancellation.
-         */
+        // Ignore intentional request cancellation.
         if (
           error instanceof DOMException &&
           error.name === "AbortError"
@@ -187,11 +185,11 @@ export default function OPACPage() {
           return;
         }
 
-        console.error("OPAC ERROR:", error);
-
         if (signal?.aborted) {
           return;
         }
+
+        console.error("OPAC ERROR:", error);
 
         setError(
           "Failed to load library resources. Please try again."
@@ -200,11 +198,11 @@ export default function OPACPage() {
         setResources([]);
         setTotal(0);
         setPages(0);
+
+        // Allow the user to see the error after searching.
+        completedSearchRef.current = searchKey;
       } finally {
-        /**
-         * Don't change loading state when this request
-         * was intentionally cancelled.
-         */
+        // Do not update loading state for cancelled requests.
         if (!signal?.aborted) {
           setLoading(false);
         }
@@ -216,13 +214,14 @@ export default function OPACPage() {
       subject,
       available,
       page,
+      searchKey,
     ]
   );
 
   /**
-   * --------------------------------------------------------------------------
    * LOAD RESOURCES
-   * --------------------------------------------------------------------------
+   *
+   * Cancel previous requests when the URL changes.
    */
 
   useEffect(() => {
@@ -236,9 +235,72 @@ export default function OPACPage() {
   }, [fetchResources]);
 
   /**
-   * --------------------------------------------------------------------------
+   * DETECT SEARCH AND FILTER CHANGES
+   *
+   * The initial page load does not trigger scrolling.
+   */
+
+  useEffect(() => {
+    if (previousSearchRef.current === null) {
+      previousSearchRef.current = searchKey;
+      return;
+    }
+
+    if (previousSearchRef.current !== searchKey) {
+      previousSearchRef.current = searchKey;
+
+      shouldScrollRef.current = Boolean(
+        query ||
+        type !== "all" ||
+        subject ||
+        available
+      );
+    }
+  }, [
+    searchKey,
+    query,
+    type,
+    subject,
+    available,
+  ]);
+
+  /**
+   * AUTOMATICALLY SCROLL TO SEARCH RESULTS
+   *
+   * Wait until the request for the current search has
+   * completed before scrolling.
+   */
+
+  useEffect(() => {
+    if (loading || !shouldScrollRef.current) {
+      return;
+    }
+
+    if (completedSearchRef.current !== searchKey) {
+      return;
+    }
+
+    shouldScrollRef.current = false;
+
+    const frameId = window.requestAnimationFrame(() => {
+      resultsRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
+    });
+
+    return () => {
+      window.cancelAnimationFrame(frameId);
+    };
+  }, [
+    loading,
+    searchKey,
+    resources,
+    error,
+  ]);
+
+  /**
    * UPDATE URL
-   * --------------------------------------------------------------------------
    */
 
   const updateURL = useCallback(
@@ -264,35 +326,21 @@ export default function OPACPage() {
         params.set("query", cleanQuery);
       }
 
-      if (
-        newType &&
-        newType !== "all"
-      ) {
+      if (newType && newType !== "all") {
         params.set("type", newType);
       }
 
       if (cleanSubject) {
-        params.set(
-          "subject",
-          cleanSubject
-        );
+        params.set("subject", cleanSubject);
       }
 
       if (newAvailable) {
-        params.set(
-          "available",
-          "true"
-        );
+        params.set("available", "true");
       }
 
-      /**
-       * Only include page when greater than 1.
-       */
+      // Only include page when greater than 1.
       if (newPage > 1) {
-        params.set(
-          "page",
-          String(newPage)
-        );
+        params.set("page", String(newPage));
       }
 
       const queryString = params.toString();
@@ -315,13 +363,20 @@ export default function OPACPage() {
   );
 
   /**
-   * --------------------------------------------------------------------------
-   * SEARCH
-   * --------------------------------------------------------------------------
+   * SEARCH HANDLER
    */
 
   function handleSearch(value: string) {
     const cleanValue = value.trim();
+
+    if (cleanValue !== query) {
+      shouldScrollRef.current = Boolean(
+        cleanValue ||
+        type !== "all" ||
+        subject ||
+        available
+      );
+    }
 
     updateURL({
       newQuery: cleanValue,
@@ -330,12 +385,19 @@ export default function OPACPage() {
   }
 
   /**
-   * --------------------------------------------------------------------------
-   * TYPE FILTER
-   * --------------------------------------------------------------------------
+   * RESOURCE TYPE FILTER
    */
 
   function handleTypeChange(value: string) {
+    if (value !== type) {
+      shouldScrollRef.current = Boolean(
+        query ||
+        value !== "all" ||
+        subject ||
+        available
+      );
+    }
+
     updateURL({
       newType: value,
       newPage: 1,
@@ -343,12 +405,19 @@ export default function OPACPage() {
   }
 
   /**
-   * --------------------------------------------------------------------------
    * SUBJECT FILTER
-   * --------------------------------------------------------------------------
    */
 
   function handleSubjectChange(value: string) {
+    if (value !== subject) {
+      shouldScrollRef.current = Boolean(
+        query ||
+        type !== "all" ||
+        value ||
+        available
+      );
+    }
+
     updateURL({
       newSubject: value,
       newPage: 1,
@@ -356,12 +425,19 @@ export default function OPACPage() {
   }
 
   /**
-   * --------------------------------------------------------------------------
    * AVAILABILITY FILTER
-   * --------------------------------------------------------------------------
    */
 
   function handleAvailableChange(value: boolean) {
+    if (value !== available) {
+      shouldScrollRef.current = Boolean(
+        query ||
+        type !== "all" ||
+        subject ||
+        value
+      );
+    }
+
     updateURL({
       newAvailable: value,
       newPage: 1,
@@ -369,18 +445,16 @@ export default function OPACPage() {
   }
 
   /**
-   * --------------------------------------------------------------------------
    * PAGINATION
-   * --------------------------------------------------------------------------
    */
 
   function handlePageChange(newPage: number) {
-    if (
-      newPage < 1 ||
-      newPage > pages
-    ) {
+    if (newPage < 1 || newPage > pages) {
       return;
     }
+
+    // Pagination scrolls to the top, not the results heading.
+    shouldScrollRef.current = false;
 
     updateURL({
       newPage,
@@ -394,9 +468,7 @@ export default function OPACPage() {
 
   return (
     <main className="min-h-screen bg-gray-50">
-      {/* ================================================================
-          OPAC HERO
-      ================================================================= */}
+      {/* OPAC HERO */}
 
       <section className="relative overflow-hidden bg-red-900 text-white">
         <div className="absolute -right-20 -top-20 h-72 w-72 rounded-full bg-white/5" />
@@ -423,9 +495,7 @@ export default function OPACPage() {
         </div>
       </section>
 
-      {/* ================================================================
-          MAIN OPAC CONTENT
-      ================================================================= */}
+      {/* MAIN OPAC CONTENT */}
 
       <section className="mx-auto max-w-7xl px-4 py-10 sm:px-6 lg:px-8">
         {/* SEARCH */}
@@ -437,9 +507,8 @@ export default function OPACPage() {
             </h2>
 
             <p className="mt-2 text-sm text-gray-500">
-              Search by title, author, ISBN,
-              subject, course code, or other
-              catalogue information.
+              Search by title, author, ISBN, subject,
+              course code, or other catalogue information.
             </p>
           </div>
 
@@ -468,18 +537,17 @@ export default function OPACPage() {
             subject={subject}
             available={available}
             onTypeChange={handleTypeChange}
-            onSubjectChange={
-              handleSubjectChange
-            }
-            onAvailableChange={
-              handleAvailableChange
-            }
+            onSubjectChange={handleSubjectChange}
+            onAvailableChange={handleAvailableChange}
           />
         </div>
 
         {/* RESULTS HEADER */}
 
-        <div className="mt-10 flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6">
+        <div
+          ref={resultsRef}
+          className="mt-10 scroll-mt-6 flex flex-col gap-4 rounded-3xl border border-gray-200 bg-white p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between sm:p-6"
+        >
           <div>
             <h2 className="text-2xl font-bold text-gray-900">
               Search Results
@@ -494,10 +562,7 @@ export default function OPACPage() {
 
           <div className="inline-flex w-fit items-center rounded-full bg-red-50 px-4 py-2 text-sm font-semibold text-red-900">
             {total.toLocaleString()}{" "}
-            {total === 1
-              ? "Resource"
-              : "Resources"}{" "}
-            Found
+            {total === 1 ? "Resource" : "Resources"} Found
           </div>
         </div>
 
@@ -547,9 +612,7 @@ export default function OPACPage() {
             <Pagination
               page={page}
               pages={pages}
-              onPageChange={
-                handlePageChange
-              }
+              onPageChange={handlePageChange}
             />
           </div>
         )}

@@ -188,6 +188,13 @@ export default function LibrarianDashboard() {
               label: "Register Users",
               path: "/register",
             },
+
+            {
+              icon: BookOpen,
+              label: "E-Resources",
+              path: "/e-resources",
+            },
+            
             {
               icon: BookOpen,
               label: "Create Borrow Books",
